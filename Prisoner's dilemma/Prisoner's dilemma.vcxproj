@@ -125,6 +125,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="CLI.hpp" />
     <ClInclude Include="GameEngine.h" />
     <ClInclude Include="Strategies.h" />
     <ClInclude Include="Strategy.h" />

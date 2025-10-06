@@ -53,19 +53,19 @@ int main(int argc, char** argv) {
     app.add_option("--generations", generations)->default_val(200)->description("Number of generations for evolution.");
     app.add_option("--mutation", mutation)->default_val(0.02)->description("Mutation rate for evolution.");
 
-    // --- 解析命令行参数 (使用标准 CLI11 模式) ---
-    try {
-        app.parse(argc, argv);
-    }
-    catch (const CLI::ParseError& e) {
-        // CLI11 推荐的方式，处理帮助、版本请求或解析错误
-        std::cerr << app.help_make_parser(e); // 打印帮助信息或错误信息 (模拟 App::help_make_parser)
-        return e.exit_code;
-    }
-    catch (const std::exception& e) {
-        std::cerr << "General Error during CLI parsing: " << e.what() << "\n";
-        return 1;
-    }
+    //// --- 解析命令行参数 (使用标准 CLI11 模式) ---
+    //try {
+    //    app.parse(argc, argv);
+    //}
+    //catch (const CLI::ParseError& e) {
+    //    // CLI11 推荐的方式，处理帮助、版本请求或解析错误
+    //    std::cerr << app.help_make_parser(e); // 打印帮助信息或错误信息 (模拟 App::help_make_parser)
+    //    return e.exit_code;
+    //}
+    //catch (const std::exception& e) {
+    //    std::cerr << "General Error during CLI parsing: " << e.what() << "\n";
+    //    return 1;
+    //}
 
     // --- 策略加载 ---
     std::vector<StrategyPtr> strategies;
