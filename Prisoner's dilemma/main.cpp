@@ -19,9 +19,12 @@ using CLI::App; // 使用真实的 CLI::App (或模拟的)
 // 工厂方法
 std::unique_ptr<Strategy> createStrategy(const std::string& name) {
     // 将所有策略注册到工厂
-    if (name == "ALLC") return std::make_unique<AllCooperate>();
-    if (name == "ALLD") return std::make_unique<AllDefect>();
-    if (name == "TFT") return std::make_unique<TitForTat>();
+    if (name == "AllCooperate") return std::make_unique<AllCooperate>();
+    if (name == "AllDefect") return std::make_unique<AllDefect>();
+    if (name == "TitForTat") return std::make_unique<TitForTat>();
+    if (name == "GrimTrigger") return std::make_unique<GrimTrigger>();
+    if (name == "PAVLOV") return std::make_unique<PAVLOV>();
+    if (name == "RandomStrategy") return std::make_unique<RandomStrategy>();
     // TODO: 其他策略，如 STFT (Suspicious Tit for Tat)
     return nullptr;
 }
@@ -34,8 +37,8 @@ int main(int argc, char** argv) {
     int population = 200, generations = 200;
     double epsilon = 0.0, mutation = 0.02;
     std::vector<double> payoffs = { 5.0, 3.0, 1.0, 0.0 }; // T, R, P, S (诱惑，奖励，惩罚，懦夫)
-    std::vector<std::string> strategy_names = { "ALLC", "ALLD", "TFT" }; // 默认运行这三个策略
-    std::string format = "text", save_file, load_file;
+    std::vector<std::string> strategy_names = { "AllCooperate", "AllDefect", "TitForTat","GrimTrigger","PAVLOV","RandomStrategy"}; // 默认运行这三个策略
+    std::string format = "json", save_file, load_file;
     bool evolve = false;
 
     // CLI 配置

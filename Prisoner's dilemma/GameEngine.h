@@ -15,7 +15,7 @@ const std::map<std::pair<Move, Move>, ScorePair> PAYOFF_MATRIX = {
 };
 
 std::string moveToString(Move m) {
-    return m == Move::Cooperate ? "C (ºÏ×÷)" : "D (±³ÅÑ)";
+    return m == Move::Cooperate ? "C (Cooperate)" : "D (Defect)";
 }
 
 class Simulator {
@@ -26,7 +26,7 @@ private:
         if (m1 == Move::Cooperate && m2 == Move::Cooperate) { return payoff_config[1]; }//R
         if (m1 == Move::Defect && m2 == Move::Defect) { return payoff_config[2]; }//R
         if (m1 == Move::Cooperate && m2 == Move::Defect) { return payoff_config[3]; }//R
-        return 0.0; // Ä¬ÈÏÇé¿ö
+        return 0.0; 
 
     }
 public:

@@ -1,27 +1,42 @@
-#ifndef STRATEGY_H
+ï»¿#ifndef STRATEGY_H
 #define STRATEGY_H
 
 #include <vector>
 #include <string>
-
-// Íæ¼Ò¶¯×÷
+#include <random>
 enum class Move { Cooperate, Defect };
 
-// ÀúÊ·¼ÇÂ¼ (pair: Íæ¼Ò1¶¯×÷, Íæ¼Ò2¶¯×÷)
 using History = std::vector<std::pair<Move, Move>>;
 
-/**
- * @brief ²ßÂÔ³éÏó»ùÀà
- */
+
 class Strategy {
+
+double noise = 0.0; // Error rate
+private:
+	mutable std::mt19937 gen{ std::random_device{}() }; // Random number generator
+    mutable std::uniform_real_distribution<double> dist{ 0.0, 1.0 };; // 0~1å‡åŒ€åˆ†å¸ƒ
+
 public:
+
+    // è®¾ç½®å™ªå£°å‚æ•°
+    void setNoise(double epsilon) { noise = epsilon; }
+    double getNoise() const { return noise; }
     virtual ~Strategy() = default;
 
-    // ¾ö¶¨ÏÂÒ»²½¶¯×÷
     virtual Move decide(const History& history) const = 0;
 
-    // ²ßÂÔÃû³Æ
     virtual std::string getName() const = 0;
+
+    Move applyNoise(Move move) const {
+        if (dist(gen) < noise) {
+            return move == Move::Cooperate ? Move::Defect : Move::Cooperate;
+        }
+        return move;
+    };
+
+    Move decideWithNoise(const History& history) const {
+        return applyNoise(decide(history));
+    }
 };
 
 #endif
