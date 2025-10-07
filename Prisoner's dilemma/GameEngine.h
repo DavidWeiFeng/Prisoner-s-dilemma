@@ -1,6 +1,4 @@
-﻿#ifndef GAMEENGINE_H
-#define GAMEENGINE_H
-#include "Strategy.h"
+﻿#include "Strategy.h"
 #include <iostream>
 #include <map>
 using ScorePair = std::pair<double, double>;
@@ -14,7 +12,7 @@ const std::map<std::pair<Move, Move>, ScorePair> PAYOFF_MATRIX = {
     {{Move::Defect, Move::Defect},      {1.0, 1.0}}  // 
 };
 
-std::string moveToString(Move m) {
+inline std::string moveToString(Move m) {
     return m == Move::Cooperate ? "C (Cooperate)" : "D (Defect)";
 }
 
@@ -90,5 +88,4 @@ public:
     };
 };
 
-#endif
 #pragma once

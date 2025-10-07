@@ -77,7 +77,8 @@ private:
     mutable std::uniform_real_distribution<double> dist; // 0~1均匀分布
 
 public:
-
+    RandomStrategy() : p(0.2), gen(std::random_device{}()), dist(0.0, 1.0) {
+    };
     // 构造函数：prob为合作概率，seed可选，用于复现结果
     RandomStrategy(double prob, unsigned int seed = std::random_device{}())
         : p(prob), gen(seed), dist(0.0, 1.0) {
