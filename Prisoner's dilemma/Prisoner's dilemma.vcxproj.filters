@@ -21,7 +21,7 @@
     <ClInclude Include="Strategies.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="GameEngine.h">
+    <ClInclude Include="Simulator.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="CLI.hpp">

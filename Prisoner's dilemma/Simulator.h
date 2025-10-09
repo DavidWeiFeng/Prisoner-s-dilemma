@@ -1,6 +1,12 @@
-﻿#include "Strategy.h"
+﻿#ifndef SIMULATOR_H
+#define SIMULATOR_H
+
+#include "Strategy.h"
 #include <iostream>
 #include <map>
+#include <memory>
+#include <vector>
+
 using ScorePair = std::pair<double, double>;
 using StrategyPtr = std::unique_ptr<Strategy>;
 
@@ -28,7 +34,7 @@ private:
 
     }
 public:
-    Simulator(const std::vector<double>& config) : payoff_config(config) {}
+    explicit Simulator(const std::vector<double>& config) : payoff_config(config) {}
 
     ScorePair runGame(const StrategyPtr& p1, const StrategyPtr& p2, int rounds) const {
         History history;
@@ -88,4 +94,4 @@ public:
     };
 };
 
-#pragma once
+#endif // SIMULATOR_H

@@ -127,7 +127,7 @@
   <ItemGroup>
     <ClInclude Include="CLI.hpp" />
     <ClInclude Include="Config.h" />
-    <ClInclude Include="GameEngine.h" />
+    <ClInclude Include="Simulator.h" />
     <ClInclude Include="Strategies.h" />
     <ClInclude Include="Strategy.h" />
   </ItemGroup>

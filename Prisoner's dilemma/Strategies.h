@@ -93,6 +93,6 @@ public:
         return "RND(""prob:"+ std::to_string(p) + ")";
     }
 };
-#endif
-#pragma once
+
+#endif // STRATEGIES_H
 

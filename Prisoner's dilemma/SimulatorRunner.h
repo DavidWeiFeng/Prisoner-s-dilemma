@@ -5,12 +5,13 @@
 #include <memory>
 #include <map>
 #include <string>
+#include <algorithm>
 #include "Config.h"
 #include "Strategy.h"
-#include "GameEngine.h"
+#include "Simulator.h"
 
 /**
- * @class AppRunner
+ * @class SimulatorRunner
  * @brief 协调主要的应用逻辑。
  *
  * 该类负责根据提供的配置来设置策略、打印配置信息、
@@ -34,11 +35,17 @@ private:
     // 将模拟和进化参数打印到控制台。
     void printConfiguration() const;
 
+    // 打印收益矩阵
+    void printPayoffMatrix() const;
+
     // 执行主要的锦标赛或进化模拟。
     void runSimulation();
 
     // 以用户指定的格式打印最终结果。
     void printResults() const;
+
+    // 打印策略分析
+    void printAnalysis() const;
 
     // 根据策略名称创建策略实例的工厂函数。
     static std::unique_ptr<Strategy> createStrategy(const std::string& name);
@@ -50,4 +57,3 @@ private:
 };
 
 #endif // SIMULATORRUNNER_H
-
