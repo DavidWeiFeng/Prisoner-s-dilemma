@@ -13,13 +13,14 @@ class Strategy {
 
 double noise = 0.0; // Error rate
 private:
-	mutable std::mt19937 gen{ std::random_device{}() }; // Random number generator
+	mutable std::mt19937 gen; // Random number generator
     mutable std::uniform_real_distribution<double> dist{ 0.0, 1.0 };; // 0~1均匀分布
 
 public:
 
     // 设置噪声参数
     void setNoise(double epsilon) { noise = epsilon; }
+	void setSeed(unsigned int seed) { gen.seed(seed); }
     double getNoise() const { return noise; }
     virtual ~Strategy() = default;
 

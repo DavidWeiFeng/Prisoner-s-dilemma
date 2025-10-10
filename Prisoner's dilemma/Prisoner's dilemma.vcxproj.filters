@@ -42,4 +42,24 @@
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Q3_EXPERIMENTS.md" />
+    <None Include="run_q3_prober_vs_allc.bat">
+      <Filter>源文件</Filter>
+    </None>
+    <None Include="run_q3_prober_vs_tft.bat">
+      <Filter>源文件</Filter>
+    </None>
+    <None Include="run_q3_mixed_population.bat">
+      <Filter>源文件</Filter>
+    </None>
+    <None Include="run_q3_noise_sweep.bat">
+      <Filter>源文件</Filter>
+    </None>
+    <None Include="run_q3_full_suite.bat">
+      <Filter>源文件</Filter>
+    </None>
+    <None Include="Q3_IMPLEMENTATION_SUMMARY.md" />
+    <None Include="Q3_QUICK_GUIDE.md" />
+  </ItemGroup>
 </Project>

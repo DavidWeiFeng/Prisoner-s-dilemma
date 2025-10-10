@@ -41,6 +41,9 @@ private:
     // 执行主要的锦标赛或进化模拟。
     void runSimulation();
 
+    // 运行噪声扫描实验
+    void runNoiseSweep();
+
     // 以用户指定的格式打印最终结果。
     void printResults() const;
 
