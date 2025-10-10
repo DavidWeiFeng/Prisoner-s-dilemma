@@ -1,7 +1,7 @@
 ﻿#include "SimulatorRunner.h"
 #include "Strategies.h" // 包含具体的策略实现
 #include "CLI.hpp"      // 假设使用 CLI11 库
-
+#include <tabulate/table.hpp>
 #include <iostream>
 #include <iomanip>
 #include <stdexcept>
@@ -61,75 +61,122 @@ void SimulatorRunner::setupStrategies() {
     }
 }
 
-// 打印模拟配置的详细信息。
+// Print detailed simulation configuration
 void SimulatorRunner::printConfiguration() const {
     std::cout << "\n=================================================\n";
-    std::cout << "    囚徒困境模拟器 (Prisoner's Dilemma Simulator)\n";
+    std::cout << "    Prisoner's Dilemma Simulator\n";
     std::cout << "=================================================\n\n";
-    std::cout << "--- 模拟配置 ---\n"
-        << "每场比赛的回合数: " << config_.rounds << "\n"
-        << "每场比赛的重复次数: " << config_.repeats << "\n";
-    
-    if (config_.noise_sweep) {
-        std::cout << "噪声扫描模式: 启用\n";
-        std::cout << "噪声范围: " << config_.noise_min << " 到 " << config_.noise_max 
-                  << " (步长: " << config_.noise_step << ")\n";
-    } else {
-        std::cout << "噪声（Epsilon）: " << config_.epsilon << "\n";
-    }
-    
-    std::cout << "随机种子: " << config_.seed << "\n"
-        << "收益 (T,R,P,S): " << std::fixed << std::setprecision(1)
-        << config_.payoffs[0] << "," << config_.payoffs[1] << ","
-        << config_.payoffs[2] << "," << config_.payoffs[3] << "\n"
-        << "参赛策略 (" << strategies_.size() << "个): ";
-    for (const auto& s : strategies_) {
-        std::cout << s->getName() << " ";
-    }
-    std::cout << "\n";
 
-    if (config_.evolve) {
-        std::cout << "\n--- 进化参数 ---\n"
-            << "种群数量: " << config_.population << "\n"
-            << "进化代数: " << config_.generations << "\n"
-            << "突变率: " << std::fixed << std::setprecision(2) << config_.mutation << "\n";
+    tabulate::Table table;
+
+    // --- Simulation Configuration ---
+    table.add_row({ "Rounds per match", std::to_string(config_.rounds) });
+    table.add_row({ "Repeats per match", std::to_string(config_.repeats) });
+
+    if (config_.noise_sweep) {
+        table.add_row({ "Noise sweep mode", "Enabled" });
+        table.add_row({ "Noise range",
+            std::to_string(config_.noise_min) + " to " +
+            std::to_string(config_.noise_max) +
+            " (step: " + std::to_string(config_.noise_step) + ")" });
     }
+    else {
+        table.add_row({ "Noise (Epsilon)", std::to_string(config_.epsilon) });
+    }
+
+    table.add_row({ "Random seed", std::to_string(config_.seed) });
+
+    // Payoffs
+    table.add_row({ "Payoffs (T,R,P,S)",
+        std::to_string(config_.payoffs[0]) + ", " +
+        std::to_string(config_.payoffs[1]) + ", " +
+        std::to_string(config_.payoffs[2]) + ", " +
+        std::to_string(config_.payoffs[3])
+        });
+
+    // Strategies
+    std::string strategy_list;
+    for (const auto& s : strategies_) {
+        strategy_list += s->getName() + " ";
+    }
+    table.add_row({ "Participating strategies", strategy_list });
+
+    // Evolution parameters
+    if (config_.evolve) {
+        table.add_row({ "Population size", std::to_string(config_.population) });
+        table.add_row({ "Generations", std::to_string(config_.generations) });
+        table.add_row({ "Mutation rate", std::to_string(config_.mutation) });
+    }
+
+    // 格式化表格
+    table.format()
+        .border_color(tabulate::Color::none)
+        .font_align(tabulate::FontAlign::center);
+
+    std::cout << table << std::endl;
 }
 
-// 新增：打印收益矩阵
+// Print the payoff matrix
 void SimulatorRunner::printPayoffMatrix() const {
     double T = config_.payoffs[0];
     double R = config_.payoffs[1];
     double P = config_.payoffs[2];
     double S = config_.payoffs[3];
 
-    std::cout << "\n--- 收益矩阵 (Payoff Matrix) ---\n";
-    std::cout << "基于经典囚徒困境参数: T > R > P > S 且 2R > T + S\n";
+    std::cout << "\n--- Payoff Matrix ---\n";
+    std::cout << "Based on the classic Prisoner's Dilemma parameters: T > R > P > S and 2R > T + S\n";
     std::cout << std::fixed << std::setprecision(1);
     std::cout << "\n";
-    std::cout << "                    对手合作(C)    对手背叛(D)\n";
-    std::cout << "              +------------------+------------------+\n";
-    std::cout << "  自己合作(C) |   R,R = " << std::setw(4) << R << "," << std::setw(4) << R
-        << "  |   S,T = " << std::setw(4) << S << "," << std::setw(4) << T << "  |\n";
-    std::cout << "              +------------------+------------------+\n";
-    std::cout << "  自己背叛(D) |   T,S = " << std::setw(4) << T << "," << std::setw(4) << S
-        << "  |   P,P = " << std::setw(4) << P << "," << std::setw(4) << P << "  |\n";
-    std::cout << "              +------------------+------------------+\n";
-    std::cout << "\n其中:\n";
-    std::cout << "  T (Temptation) = " << T << "  - 背叛合作者的诱惑\n";
-    std::cout << "  R (Reward)     = " << R << "  - 互相合作的奖励\n";
-    std::cout << "  P (Punishment) = " << P << "  - 互相背叛的惩罚\n";
-    std::cout << "  S (Sucker)     = " << S << "  - 被背叛的傻瓜报酬\n";
+    tabulate::Table table;
+
+    // 设置表头
+    table.add_row({ "", "Opponent Cooperates (C)", "Opponent Defects (D)" });
+
+    // 第一行：You Cooperate
+    table.add_row({
+        "You Cooperate (C)",
+        "R,R = " + std::to_string(R) + "," + std::to_string(R),
+        "S,T = " + std::to_string(S) + "," + std::to_string(T)
+        });
+
+    // 第二行：You Defect
+    table.add_row({
+        "You Defect (D)",
+        "T,S = " + std::to_string(T) + "," + std::to_string(S),
+        "P,P = " + std::to_string(P) + "," + std::to_string(P)
+        });
+
+    // 格式化表格
+    table.format()
+        .border_color(tabulate::Color::blue)
+        .font_align(tabulate::FontAlign::center);
+        //.corner_corner('┼')
+        //.corner_top_left('┌')
+        //.corner_top_right('┐')
+        //.corner_bottom_left('└')
+        //.corner_bottom_right('┘')
+        //.border_top('=')
+        //.border_bottom('=')
+        //.border_left('|')
+        //.border_right('|');
+
+    std::cout << table << std::endl;
+    std::cout << "\nWhere:\n";
+    std::cout << "  T (Temptation) = " << T << "  - Temptation to defect against a cooperator\n";
+    std::cout << "  R (Reward)     = " << R << "  - Reward for mutual cooperation\n";
+    std::cout << "  P (Punishment) = " << P << "  - Punishment for mutual defection\n";
+    std::cout << "  S (Sucker)     = " << S << "  - Payoff for being betrayed when cooperating\n";
     std::cout << "\n";
 }
 
-// 运行相应的模拟（标准锦标赛或进化模拟）。
+
+// Run the corresponding simulation (standard tournament or evolutionary simulation).
 void SimulatorRunner::runSimulation() {
-    std::cout << "\n--- 锦标赛开始 ---\n";
+    std::cout << "\n--- Tournament Start ---\n";
     if (config_.evolve) {
-        // 注意：进化逻辑尚未在 GameEngine 中实现。
-        // 这里只是一个占位符，告诉您应该在哪里调用它。
-        std::cout << "已选择进化模式（功能尚未实现）。\n";
+        // Note: Evolutionary logic has not been implemented in GameEngine yet.
+        // This is just a placeholder indicating where the call should go.
+        std::cout << "Evolution mode selected (feature not yet implemented).\n";
         // results_ = simulator_.runEvolution(...);
     }
     else {
@@ -137,13 +184,14 @@ void SimulatorRunner::runSimulation() {
     }
 }
 
-// 打印最终结果。
+
+// Print the final results.
 void SimulatorRunner::printResults() const {
     std::cout << "\n=================================================\n";
-    std::cout << "--- 锦标赛结果 (各策略平均分) ---\n";
+    std::cout << "--- Tournament Results (Average Score per Strategy) ---\n";
     std::cout << "=================================================\n";
 
-    // 创建一个排序的结果列表
+    // Create a sorted list of results
     std::vector<std::pair<std::string, double>> sorted_results(results_.begin(), results_.end());
     std::sort(sorted_results.begin(), sorted_results.end(),
         [](const auto& a, const auto& b) { return a.second > b.second; });
@@ -153,7 +201,7 @@ void SimulatorRunner::printResults() const {
         std::cout << rank++ << ". " << std::setw(25) << std::left << name << ": "
             << std::fixed << std::setprecision(4) << score << "\n";
     }
-    std::cout << "\n--- 模拟结束 ---\n";
+    std::cout << "\n--- Simulation Complete ---\n";
 }
 
 // 新增：打印策略分析
@@ -263,37 +311,37 @@ void SimulatorRunner::runNoiseSweep() {
     Simulator::analyzeNoiseImpact(results);
 }
 
-// 处理所有命令行解析并返回一个 Config 结构体。
+// Handle all command-line parsing and return a Config structure.
 Config SimulatorRunner::parseArguments(int argc, char** argv) {
-    CLI::App app{ "迭代囚徒困境模拟器" };
+    CLI::App app{ "Iterated Prisoner's Dilemma Simulator" };
     Config config;
 
-    // 设置 CLI 选项并将它们绑定到 config 结构体的成员上。
-    app.add_option("--rounds", config.rounds, "每场比赛的回合数。");
-    app.add_option("--repeats", config.repeats, "为计算平均值，每场比赛重复的次数。");
-    app.add_option("--epsilon", config.epsilon, "随机行动（错误率）的概率。");
-    app.add_option("--seed", config.seed, "用于可复现性的随机种子。");
-    app.add_option("--payoffs", config.payoffs, "收益值 [T, R, P, S]。")->expected(4);
-    app.add_option("--strategies", config.strategy_names, "参赛策略列表。");
-    app.add_option("--format", config.format, "输出格式 (text, csv, json)。");
-    app.add_option("--save", config.save_file, "保存配置的文件路径。");
-    app.add_option("--load", config.load_file, "加载配置的文件路径。");
-    app.add_flag("--evolve", config.evolve, "启用进化模拟模式。");
-    app.add_option("--population", config.population, "进化模拟的种群大小。");
-    app.add_option("--generations", config.generations, "进化模拟的代数。");
-    app.add_option("--mutation", config.mutation, "进化模拟的突变率。");
-    
-    // 噪声扫描选项
-    app.add_flag("--noise-sweep", config.noise_sweep, "启用噪声扫描模式。");
-    app.add_option("--noise-min", config.noise_min, "噪声扫描的最小值。");
-    app.add_option("--noise-max", config.noise_max, "噪声扫描的最大值。");
-    app.add_option("--noise-step", config.noise_step, "噪声扫描的步长。");
+    // Set up CLI options and bind them to members of the config structure.
+    app.add_option("--rounds", config.rounds, "Number of rounds per match.");
+    app.add_option("--repeats", config.repeats, "Number of repetitions per match to compute the average score.");
+    app.add_option("--epsilon", config.epsilon, "Probability of random action (error rate).");
+    app.add_option("--seed", config.seed, "Random seed for reproducibility.");
+    app.add_option("--payoffs", config.payoffs, "Payoff values [T, R, P, S].")->expected(4);
+    app.add_option("--strategies", config.strategy_names, "List of participating strategies.");
+    app.add_option("--format", config.format, "Output format (text, csv, json).");
+    app.add_option("--save", config.save_file, "File path to save the current configuration.");
+    app.add_option("--load", config.load_file, "File path to load a saved configuration.");
+    app.add_flag("--evolve", config.evolve, "Enable evolutionary simulation mode.");
+    app.add_option("--population", config.population, "Population size for the evolutionary simulation.");
+    app.add_option("--generations", config.generations, "Number of generations for the evolutionary simulation.");
+    app.add_option("--mutation", config.mutation, "Mutation rate for the evolutionary simulation.");
+
+    // Noise sweep options
+    app.add_flag("--noise-sweep", config.noise_sweep, "Enable noise sweep mode.");
+    app.add_option("--noise-min", config.noise_min, "Minimum value for noise sweep.");
+    app.add_option("--noise-max", config.noise_max, "Maximum value for noise sweep.");
+    app.add_option("--noise-step", config.noise_step, "Step size for noise sweep.");
 
     try {
         app.parse(argc, argv);
     }
     catch (const CLI::ParseError& e) {
-        throw std::runtime_error("命令行参数解析错误。请检查您的输入。错误: " + std::string(e.what()));
+        throw std::runtime_error("Command-line argument parsing error. Please check your input. Error: " + std::string(e.what()));
     }
 
     return config;

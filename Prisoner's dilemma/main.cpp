@@ -3,10 +3,8 @@
 #include <memory>
 #include <string>
 #include <stdexcept>
-
 #include "SimulatorRunner.h"
 #include "Config.h"
-
 int main(int argc, char** argv) {
     try {
         // 1. 解析命令行参数，生成一个配置对象。

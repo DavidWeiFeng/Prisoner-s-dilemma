@@ -10,6 +10,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <tabulate/table.hpp>
 
 using ScorePair = std::pair<double, double>;
 using StrategyPtr = std::unique_ptr<Strategy>;
@@ -122,34 +123,34 @@ public:
         return avg_scores;
     }
 
-    // 噪声扫描：在不同噪声水平下运行锦标赛
+    // Noise Sweep: Run tournaments at different noise levels
     std::map<double, std::map<std::string, double>> runNoiseSweep(
         std::vector<StrategyPtr>& strategies,
         int rounds,
         int repeats,
         const std::vector<double>& noise_levels) const {
-        
+
         std::map<double, std::map<std::string, double>> results;
 
         std::cout << "\n=================================================\n";
-        std::cout << "   噪声扫描实验 (Noise Sweep Experiment)\n";
+        std::cout << "       Noise Sweep Experiment\n";
         std::cout << "=================================================\n\n";
 
         for (double epsilon : noise_levels) {
-            std::cout << "\n--- 测试噪声水平 ε = " << std::fixed << std::setprecision(2) 
-                      << epsilon << " ---\n";
+            std::cout << "\n--- Testing noise level ε = " << std::fixed << std::setprecision(2)
+                << epsilon << " ---\n";
 
-            // 为所有策略设置噪声
+            // Set noise for all strategies
             for (auto& s : strategies) {
                 s->setNoise(epsilon);
             }
 
-            // 运行锦标赛
+            // Run the tournament
             std::map<std::string, double> tournamentResults = runTournament(strategies, rounds, repeats);
             results[epsilon] = tournamentResults;
 
-            // 打印该噪声水平下的结果
-            std::cout << "\n噪声 ε = " << epsilon << " 下的平均得分:\n";
+            // Print results for this noise level
+            std::cout << "\nAverage scores at noise ε = " << epsilon << ":\n";
             std::vector<std::pair<std::string, double>> sorted_results(
                 tournamentResults.begin(), tournamentResults.end());
             std::sort(sorted_results.begin(), sorted_results.end(),
@@ -163,6 +164,7 @@ public:
 
         return results;
     }
+
 
     // 打印噪声扫描结果表格
     static void printNoiseSweepTable(const std::map<double, std::map<std::string, double>>& results) {
@@ -277,49 +279,48 @@ private:
 
     void printMatchTable(const std::vector<StrategyPtr>& strategies,
         const std::vector<std::vector<std::pair<double, double>>>& matchResults) const {
-        const int nameWidth = 20;
-        const int scoreWidth = 18;
 
-        std::cout << "\n对战结果矩阵 (ε = " << std::fixed << std::setprecision(2) 
-                  << noise_level << "):\n";
-        std::cout << "格式: P1得分 vs P2得分\n\n";
+        std::cout << "\n--- Match Result Matrix (Noise ε = "
+            << std::fixed << std::setprecision(2) << noise_level << ") ---\n";
+        std::cout << "Format: P1 score : P2 score\n\n";
 
-        // 打印表头
-        printTableDivider(nameWidth, scoreWidth, strategies.size());
-        std::cout << "  |" << std::setw(nameWidth) << std::left << " 策略 \\ 对手";
+        tabulate::Table table;
+
+        // 表头
+        std::vector<std::string> header = { "Strategy \\ Opponent" };
         for (const auto& s : strategies) {
-            std::string name = fitString(s->getName(), scoreWidth);
-            std::cout << "|" << std::setw(scoreWidth) << std::left << " " + name;
+            header.push_back(s->getName());
         }
-        std::cout << "|\n";
-        printTableDivider(nameWidth, scoreWidth, strategies.size());
+        table.add_row({ header.begin(), header.end() }); // 
 
-        // 打印每一行
+
+        // 填充每一行
         for (size_t i = 0; i < strategies.size(); ++i) {
-            std::string rowName = fitString(strategies[i]->getName(), nameWidth);
-            std::cout << "  |" << std::setw(nameWidth) << std::left << " " + rowName;
+            std::vector<std::string> row;
+            row.push_back(strategies[i]->getName());  // 行标题
 
             for (size_t j = 0; j < strategies.size(); ++j) {
-                std::cout << "|";
+				std::ostringstream oss;
+				oss << std::fixed << std::setprecision(2);
                 if (i == j) {
-                    // 对角线：自己对自己
-                    std::cout << std::setw(scoreWidth) << std::right
-                        << std::fixed << std::setprecision(1)
-                        << matchResults[i][j].first << " ";
+                    // 对角线：自己 vs 自己
+					oss << matchResults[i][j].first;
                 }
                 else {
-                    // 显示 P1 vs P2 得分
-                    std::ostringstream oss;
-                    oss << std::fixed << std::setprecision(1)
-                        << matchResults[i][j].first << " : "
-                        << matchResults[i][j].second;
-                    std::cout << std::setw(scoreWidth) << std::right << oss.str() << " ";
+                    // P1 vs P2
+                    oss << matchResults[i][j].first << " : " << matchResults[i][j].second;
                 }
+				row.push_back(oss.str());
             }
-            std::cout << "|\n";
+            table.add_row({row.begin(),row.end()});
         }
-        printTableDivider(nameWidth, scoreWidth, strategies.size());
-        std::cout << "\n";
+
+        // 格式化表格
+        table.format()
+            .border_color(tabulate::Color::green)
+            .font_align(tabulate::FontAlign::center);
+
+        std::cout << table << std::endl;
     }
 };
 
