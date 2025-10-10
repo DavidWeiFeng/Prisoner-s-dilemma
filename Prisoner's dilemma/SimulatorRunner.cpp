@@ -134,18 +134,24 @@ void SimulatorRunner::printPayoffMatrix() const {
     table.add_row({ "", "Opponent Cooperates (C)", "Opponent Defects (D)" });
 
     // 第一行：You Cooperate
-    table.add_row({
-        "You Cooperate (C)",
-        "R,R = " + std::to_string(R) + "," + std::to_string(R),
-        "S,T = " + std::to_string(S) + "," + std::to_string(T)
-    });
+    std::ostringstream oss1;
+    oss1 << std::fixed << std::setprecision(2);
+    oss1 << "R,R = " << R << "," << R;
+    // 格式化 S,T
+    std::ostringstream oss2;
+    oss2 << std::fixed << std::setprecision(2);
+    oss2 << "S,T = " << S << "," << T;
+	std::string rr = "R,R = " + std::to_string(R) + "," + std::to_string(R);
+    table.add_row({"You Cooperate (C)",oss1.str(),oss2.str()});
 
-    // 第二行：You Defect
-    table.add_row({
-        "You Defect (D)",
-        "T,S = " + std::to_string(T) + "," + std::to_string(S),
-        "P,P = " + std::to_string(P) + "," + std::to_string(P)
-    });
+    std::ostringstream oss3;
+    oss3 << std::fixed << std::setprecision(2);
+    oss3 << "T,S = " << T << "," << S;
+    // 格式化 S,T
+    std::ostringstream oss4;
+    oss4 << std::fixed << std::setprecision(2);
+    oss4 << "P,P =  " << P << "," << P;
+    table.add_row({ "You Defect (D)",oss3.str(),oss4.str() });
 
     // 格式化表格
     table.format()
