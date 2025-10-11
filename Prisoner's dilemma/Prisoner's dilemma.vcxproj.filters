@@ -61,5 +61,10 @@
     </None>
     <None Include="Q3_IMPLEMENTATION_SUMMARY.md" />
     <None Include="Q3_QUICK_GUIDE.md" />
+    <None Include="CONFIDENCE_INTERVALS.md" />
+    <None Include="CI_EXAMPLES.md" />
+    <None Include="CI_IMPLEMENTATION_SUMMARY.md" />
+    <None Include="CI_QUICK_REFERENCE.md" />
+    <None Include="BUG_FIX_DOUBLE_COUNTING.md" />
   </ItemGroup>
 </Project>

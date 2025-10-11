@@ -56,7 +56,7 @@ private:
     Config config_;
     std::vector<std::unique_ptr<Strategy>> strategies_;
     Simulator simulator_;
-    std::map<std::string, double> results_; // 用于存储模拟结果
+    std::map<std::string, ScoreStats> results_; // 用于存储模拟结果（包括置信区间）
 };
 
 #endif // SIMULATORRUNNER_H

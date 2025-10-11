@@ -10,6 +10,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <cmath>
 #include <tabulate/table.hpp>
 
 using ScorePair = std::pair<double, double>;
@@ -18,6 +19,20 @@ using StrategyPtr = std::unique_ptr<Strategy>;
 inline std::string moveToString(Move m) {
     return m == Move::Cooperate ? "C (Cooperate)" : "D (Defect)";
 }
+
+// Structure to hold statistical information about scores
+struct ScoreStats {
+    double mean;
+    double stdev;
+    double ci_lower;
+    double ci_upper;
+    int n_samples;
+
+    ScoreStats() : mean(0.0), stdev(0.0), ci_lower(0.0), ci_upper(0.0), n_samples(0) {}
+    
+    ScoreStats(double m, double sd, double ci_low, double ci_high, int n)
+        : mean(m), stdev(sd), ci_lower(ci_low), ci_upper(ci_high), n_samples(n) {}
+};
 
 class Simulator {
 private:
@@ -30,6 +45,43 @@ private:
         if (m1 == Move::Defect && m2 == Move::Defect) { return payoff_config[2]; }//P
         if (m1 == Move::Cooperate && m2 == Move::Defect) { return payoff_config[3]; }//S
         return 0.0;
+    }
+
+    // Calculate mean and standard deviation from a vector of scores
+    std::pair<double, double> calculateStats(const std::vector<double>& scores) const {
+        if (scores.empty()) return {0.0, 0.0};
+        
+        double sum = 0.0;
+        for (double s : scores) sum += s;
+        double mean = sum / scores.size();
+        
+        if (scores.size() < 2) return {mean, 0.0};
+        
+        double variance = 0.0;
+        for (double s : scores) {
+            variance += (s - mean) * (s - mean);
+        }
+        variance /= (scores.size() - 1); // Sample variance (unbiased estimator)
+        double stdev = std::sqrt(variance);
+        
+        return {mean, stdev};
+    }
+    
+    // Calculate 95% confidence interval
+    // Formula: mean ± 1.96 × (stdev / √n)
+    ScoreStats calculateConfidenceInterval(const std::vector<double>& scores) const {
+        if (scores.empty()) return ScoreStats();
+        
+        auto [mean, stdev] = calculateStats(scores);
+        
+        if (scores.size() < 2) {
+            return ScoreStats(mean, stdev, mean, mean, scores.size());
+        }
+        
+        double se = stdev / std::sqrt(scores.size()); // Standard Error
+        double margin = 1.96 * se; // 95% CI uses z = 1.96
+        
+        return ScoreStats(mean, stdev, mean - margin, mean + margin, scores.size());
     }
 
 public:
@@ -65,72 +117,88 @@ public:
         return { score1, score2 };
     }
 
-    // 标准锦标赛
-    std::map<std::string, double> runTournament(const std::vector<StrategyPtr>& strategies, 
-                                                  int rounds, int repeats) const {
-        std::map<std::string, double> totalScores;
+    // 标准锦标赛 with confidence intervals
+    std::map<std::string, ScoreStats> runTournament(const std::vector<StrategyPtr>& strategies, 
+                                                      int rounds, int repeats) const {
+        std::map<std::string, std::vector<double>> allScores; // Track all scores for CI calculation
         std::map<std::string, int> matchCounts;
 
         // 初始化
         for (const auto& s : strategies) {
-            totalScores[s->getName()] = 0.0;
+            allScores[s->getName()] = std::vector<double>();
             matchCounts[s->getName()] = 0;
         }
 
         // 存储详细对战结果用于表格显示
-        std::vector<std::vector<std::pair<double, double>>> matchResults(strategies.size(),
-            std::vector<std::pair<double, double>>(strategies.size()));
+        int N = strategies.size();
+        std::vector<std::vector<ScorePair>> matchResults(N, std::vector<ScorePair>(N));
+
 
         // 循环赛：每个策略两两对战
         for (size_t i = 0; i < strategies.size(); ++i) {
             for (size_t j = i; j < strategies.size(); ++j) {
                 const auto& p1 = strategies[i];
                 const auto& p2 = strategies[j];
-                double cumulative_score1 = 0.0;
-                double cumulative_score2 = 0.0;
+                
+                std::vector<double> p1_scores;
+                std::vector<double> p2_scores;
 
                 for (int r = 0; r < repeats; ++r) {
                     ScorePair scores = runGame(p1, p2, rounds);
-                    cumulative_score1 += scores.first;
-                    cumulative_score2 += scores.second;
+                    p1_scores.push_back(scores.first);
+                    p2_scores.push_back(scores.second);
+                    
+                    // Store for overall statistics
+                    // 修复: 当策略对战自己时(i==j)，只添加一次分数
+                    if (i == j) {
+                        // 同一策略对战自己，两个分数相同，只添加一次
+                        allScores[p1->getName()].push_back(scores.first);
+                    } else {
+                        // 不同策略对战，分别添加各自的分数
+                        allScores[p1->getName()].push_back(scores.first);
+                        allScores[p2->getName()].push_back(scores.second);
+                    }
                 }
 
-                double avg_score1 = cumulative_score1 / repeats;
-                double avg_score2 = cumulative_score2 / repeats;
+                // Calculate average for match table
+                double avg_score1 = 0.0, avg_score2 = 0.0;
+                for (double s : p1_scores) avg_score1 += s;
+                for (double s : p2_scores) avg_score2 += s;
+                avg_score1 /= repeats;
+                avg_score2 /= repeats;
 
                 matchResults[i][j] = { avg_score1, avg_score2 };
                 if (i != j) {
                     matchResults[j][i] = { avg_score2, avg_score1 };
                 }
 
-                totalScores[p1->getName()] += cumulative_score1;
-                totalScores[p2->getName()] += cumulative_score2;
                 matchCounts[p1->getName()] += repeats;
-                matchCounts[p2->getName()] += repeats;
+                if (i != j) {
+                    matchCounts[p2->getName()] += repeats;
+                }
             }
         }
 
         // 打印对战结果表格
         printMatchTable(strategies, matchResults);
 
-        // 计算并返回全局平均分
-        std::map<std::string, double> avg_scores;
-        for (const auto& [name, total] : totalScores) {
-            if (matchCounts.at(name) > 0) {
-                avg_scores[name] = total / matchCounts.at(name);
-            }
+        // 计算每个策略的总体统计信息（包括置信区间）
+        std::map<std::string, ScoreStats> stats;
+        for (const auto& [name, scores] : allScores) {
+            stats[name] = calculateConfidenceInterval(scores);
         }
-        return avg_scores;
+        
+        return stats;
     }
 
     // Noise Sweep: Run tournaments at different noise levels
-    std::map<double, std::map<std::string, double>> runNoiseSweep(
+    std::map<double, std::map<std::string, ScoreStats>> runNoiseSweep(
         std::vector<StrategyPtr>& strategies,
         int rounds,
         int repeats,
         const std::vector<double>& noise_levels) const {
 
-        std::map<double, std::map<std::string, double>> results;
+        std::map<double, std::map<std::string, ScoreStats>> results;
 
         std::cout << "\n=================================================\n";
         std::cout << "       Noise Sweep Experiment\n";
@@ -146,28 +214,28 @@ public:
             }
 
             // Run the tournament
-            std::map<std::string, double> tournamentResults = runTournament(strategies, rounds, repeats);
+            std::map<std::string, ScoreStats> tournamentResults = runTournament(strategies, rounds, repeats);
             results[epsilon] = tournamentResults;
 
             // Print results for this noise level
-            std::cout << "\nAverage scores at noise ε = " << epsilon << ":\n";
-            std::vector<std::pair<std::string, double>> sorted_results(
+            std::cout << "\nAverage scores at noise ε = " << epsilon << " (with 95% CI):\n";
+            std::vector<std::pair<std::string, ScoreStats>> sorted_results(
                 tournamentResults.begin(), tournamentResults.end());
             std::sort(sorted_results.begin(), sorted_results.end(),
-                [](const auto& a, const auto& b) { return a.second > b.second; });
+                [](const auto& a, const auto& b) { return a.second.mean > b.second.mean; });
 
-            for (const auto& [name, score] : sorted_results) {
+            for (const auto& [name, stats] : sorted_results) {
                 std::cout << "  " << std::setw(15) << std::left << name << ": "
-                    << std::fixed << std::setprecision(2) << score << "\n";
+                    << std::fixed << std::setprecision(2) << stats.mean 
+                    << "  [" << stats.ci_lower << ", " << stats.ci_upper << "]\n";
             }
         }
 
         return results;
     }
 
-
     // 打印噪声扫描结果表格
-    static void printNoiseSweepTable(const std::map<double, std::map<std::string, double>>& results) {
+    static void printNoiseSweepTable(const std::map<double, std::map<std::string, ScoreStats>>& results) {
         if (results.empty()) return;
 
         std::cout << "\n=================================================\n";
@@ -176,24 +244,27 @@ public:
 
         // 获取所有策略名称
         std::vector<std::string> strategies;
-        for (const auto& [name, score] : results.begin()->second) {
+        for (const auto& [name, stats] : results.begin()->second) {
             strategies.push_back(name);
         }
 
         // 打印表头
         std::cout << std::setw(10) << "ε (Noise)";
         for (const auto& name : strategies) {
-            std::cout << std::setw(15) << name;
+            std::cout << std::setw(25) << name;
         }
         std::cout << "\n";
-        std::cout << std::string(10 + strategies.size() * 15, '-') << "\n";
+        std::cout << std::string(10 + strategies.size() * 25, '-') << "\n";
 
-        // 打印每个噪声水平的结果
+        // 打印每个噪声水平的结果（mean ± CI）
         for (const auto& [epsilon, scores] : results) {
             std::cout << std::fixed << std::setprecision(2) << std::setw(10) << epsilon;
             for (const auto& name : strategies) {
-                std::cout << std::setw(15) << std::fixed << std::setprecision(2) 
-                          << scores.at(name);
+                const auto& stats = scores.at(name);
+                std::ostringstream oss;
+                oss << std::fixed << std::setprecision(2) 
+                    << stats.mean << " [" << stats.ci_lower << "," << stats.ci_upper << "]";
+                std::cout << std::setw(25) << oss.str();
             }
             std::cout << "\n";
         }
@@ -201,7 +272,7 @@ public:
     }
 
     // 分析噪声对策略的影响
-    static void analyzeNoiseImpact(const std::map<double, std::map<std::string, double>>& results) {
+    static void analyzeNoiseImpact(const std::map<double, std::map<std::string, ScoreStats>>& results) {
         if (results.empty()) return;
 
         std::cout << "\n=================================================\n";
@@ -216,8 +287,10 @@ public:
                   << results.rbegin()->first << "):\n\n";
 
         std::vector<std::pair<std::string, double>> performance_drops;
-        for (const auto& [name, base_score] : baseline) {
-            double drop_percent = ((base_score - highest.at(name)) / base_score) * 100.0;
+        for (const auto& [name, base_stats] : baseline) {
+            double base_score = base_stats.mean;
+            double high_score = highest.at(name).mean;
+            double drop_percent = ((base_score - high_score) / base_score) * 100.0;
             performance_drops.push_back({ name, drop_percent });
         }
 
@@ -259,24 +332,6 @@ public:
     }
 
 private:
-    // 辅助函数：打印表格分隔线
-    void printTableDivider(int nameWidth, int scoreWidth, int cols) const {
-        std::cout << "  +";
-        std::cout << std::string(nameWidth, '-') << "+";
-        for (int i = 0; i < cols; ++i) {
-            std::cout << std::string(scoreWidth, '-') << "+";
-        }
-        std::cout << "\n";
-    }
-
-    // 辅助函数：截断或填充字符串到指定宽度
-    std::string fitString(const std::string& str, int width) const {
-        if (str.length() > static_cast<size_t>(width - 1)) {
-            return str.substr(0, width - 4) + "...";
-        }
-        return str;
-    }
-
     void printMatchTable(const std::vector<StrategyPtr>& strategies,
         const std::vector<std::vector<std::pair<double, double>>>& matchResults) const {
 
@@ -291,7 +346,7 @@ private:
         for (const auto& s : strategies) {
             header.push_back(s->getName());
         }
-        table.add_row({ header.begin(), header.end() }); // 
+        table.add_row({ header.begin(), header.end() }); 
 
 
         // 填充每一行

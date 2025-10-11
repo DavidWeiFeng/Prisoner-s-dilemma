@@ -177,21 +177,35 @@ void SimulatorRunner::runSimulation() {
     }
 }
 
+// 打印最终结果。
 void SimulatorRunner::printResults() const {
     std::cout << "\n=================================================\n";
     std::cout << "--- Tournament Results (Average Score per Strategy) ---\n";
     std::cout << "=================================================\n";
 
-    std::vector<std::pair<std::string, double>> sorted_results(results_.begin(), results_.end());
+    // 创建一个排序的结果列表（按平均分排序）
+    std::vector<std::pair<std::string, ScoreStats>> sorted_results(results_.begin(), results_.end());
     std::sort(sorted_results.begin(), sorted_results.end(),
-        [](const auto& a, const auto& b) { return a.second > b.second; });
+        [](const auto& a, const auto& b) { return a.second.mean > b.second.mean; });
+
+    std::cout << "\n格式: 策略名称: 平均分 [95% CI 下限, 上限] (标准差)\n";
+    std::cout << "基于 " << config_.repeats << " 次重复实验\n\n";
 
     int rank = 1;
-    for (const auto& [name, score] : sorted_results) {
-        std::cout << rank++ << ". " << std::setw(25) << std::left << name << ": "
-            << std::fixed << std::setprecision(4) << score << "\n";
+    for (const auto& [name, stats] : sorted_results) {
+        std::cout << rank++ << ". " << std::setw(20) << std::left << name << ": "
+            << std::fixed << std::setprecision(2) << stats.mean 
+            << "  [" << stats.ci_lower << ", " << stats.ci_upper << "]"
+            << "  (σ=" << stats.stdev << ")\n";
     }
-    std::cout << "\n--- Simulation Complete ---\n";
+    
+    std::cout << "\n说明:\n";
+    std::cout << "  - 平均分: 该策略在所有对战中的平均得分\n";
+    std::cout << "  - 95% CI: 95%置信区间，真实均值有95%概率落在此区间内\n";
+    std::cout << "  - 标准差(σ): 得分的离散程度\n";
+    std::cout << "  - 置信区间公式: mean ± 1.96 × (σ / √" << config_.repeats << ")\n";
+    
+    std::cout << "\n--- 模拟结束 ---\n";
 }
 
 void SimulatorRunner::printAnalysis() const {
