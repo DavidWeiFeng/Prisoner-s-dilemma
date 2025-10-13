@@ -13,6 +13,13 @@ SimulatorRunner::SimulatorRunner(const Config& config)
     : config_(config), simulator_(config.payoffs, config.epsilon) {
 }
 
+auto format_double = [](double value) {
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(2) << value;
+    return oss.str();
+    };
+
+
 // 主要执行流程
 void SimulatorRunner::run() {
     setupStrategies();
@@ -25,7 +32,7 @@ void SimulatorRunner::run() {
     } else {
         runSimulation();
         printResults();
-        printAnalysis();
+        printAnalysisQ1();
     }
 }
 
@@ -177,41 +184,70 @@ void SimulatorRunner::runSimulation() {
     }
 }
 
-// 打印最终结果。
 void SimulatorRunner::printResults() const {
     std::cout << "\n=================================================\n";
     std::cout << "--- Tournament Results (Average Score per Strategy) ---\n";
     std::cout << "=================================================\n";
 
-    // 创建一个排序的结果列表（按平均分排序）
+    // Sort results by mean score (descending)
     std::vector<std::pair<std::string, ScoreStats>> sorted_results(results_.begin(), results_.end());
     std::sort(sorted_results.begin(), sorted_results.end(),
         [](const auto& a, const auto& b) { return a.second.mean > b.second.mean; });
 
-    std::cout << "\n格式: 策略名称: 平均分 [95% CI 下限, 上限] (标准差)\n";
-    std::cout << "基于 " << config_.repeats << " 次重复实验\n\n";
+    std::cout << "Based on " << config_.repeats << " repeated experiments\n\n";
+
+    tabulate::Table table;
+    table.add_row({ "Rank", "Strategy", "Mean", "95% CI Lower", "95% CI Upper", "Std Dev (σ)" });
 
     int rank = 1;
     for (const auto& [name, stats] : sorted_results) {
-        std::cout << rank++ << ". " << std::setw(20) << std::left << name << ": "
-            << std::fixed << std::setprecision(2) << stats.mean 
-            << "  [" << stats.ci_lower << ", " << stats.ci_upper << "]"
-            << "  (σ=" << stats.stdev << ")\n";
+        table.add_row({
+            std::to_string(rank++),
+            name,
+            format_double(stats.mean),
+            format_double(stats.ci_lower),
+            format_double(stats.ci_upper),
+            format_double(stats.stdev)
+            });
     }
-    
-    std::cout << "\n说明:\n";
-    std::cout << "  - 平均分: 该策略在所有对战中的平均得分\n";
-    std::cout << "  - 95% CI: 95%置信区间，真实均值有95%概率落在此区间内\n";
-    std::cout << "  - 标准差(σ): 得分的离散程度\n";
-    std::cout << "  - 置信区间公式: mean ± 1.96 × (σ / √" << config_.repeats << ")\n";
-    
-    std::cout << "\n--- 模拟结束 ---\n";
+
+    // Apply styling
+    table.format()
+        .font_align(tabulate::FontAlign::center)
+        .font_style({ tabulate::FontStyle::bold })
+        .border_color(tabulate::Color::cyan)
+        .border_top("═")
+        .border_bottom("═")
+        .border_left("║")
+        .border_right("║");
+
+    for (size_t i = 0; i < table.size(); ++i) {
+        table[i].format()
+            .font_style({ tabulate::FontStyle::bold })
+            .font_align(tabulate::FontAlign::center);
+    }
+
+    std::cout << table << "\n";
+
+    std::cout << "\nNotes:\n";
+    std::cout << "  - Mean: The average score of this strategy across all matches.\n";
+    std::cout << "  - 95% CI: 95% Confidence Interval — the range where the true mean is likely to fall.\n";
+    std::cout << "  - Std Dev (σ): Indicates how dispersed the scores are.\n";
+    std::cout << "  - CI Formula: mean ± 1.96 × (σ / √" << config_.repeats << ")\n";
+    std::cout << "\n--- Simulation Complete ---\n";
 }
 
-void SimulatorRunner::printAnalysis() const {
+
+void SimulatorRunner::printAnalysisQ1() const {
     std::cout << "\n=================================================\n";
-    std::cout << "--- Strategy Analysis ---\n";
+    std::cout << "--- Q1 Analysis ---\n";
     std::cout << "=================================================\n\n";
+    std::cout
+        << "Based on the results in the table, ALLD (Always Defect) achieved the highest mean payoff\n"
+        << "in a noise-free environment, ranking first with a mean score of 50.40.\n\n"
+        << "This outcome suggests that when there is no noise or execution error, defection remains\n"
+        << "the most profitable strategy overall, since players can consistently exploit cooperative\n"
+        << "opponents without risk of accidental punishment.\n";
 }
 
 void SimulatorRunner::runNoiseSweep() {

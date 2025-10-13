@@ -48,7 +48,7 @@ private:
     void printResults() const;
 
     // 打印策略分析
-    void printAnalysis() const;
+    void printAnalysisQ1() const;
 
     // 根据策略名称创建策略实例的工厂函数。
     static std::unique_ptr<Strategy> createStrategy(const std::string& name);

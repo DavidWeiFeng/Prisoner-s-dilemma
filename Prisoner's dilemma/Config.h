@@ -32,7 +32,7 @@ struct Config {
     double mutation = 0.02;
     
     // 噪声扫描参数
-    bool noise_sweep = false;       // 默认启用噪声扫描
+    bool noise_sweep = true;       // 默认启用噪声扫描
     double noise_min = 0.0;        // 最小噪声水平
     double noise_max = 0.2;        // 最大噪声水平
     double noise_step = 0.05;      // 噪声步长

@@ -239,7 +239,7 @@ public:
         if (results.empty()) return;
 
         std::cout << "\n=================================================\n";
-        std::cout << "   噪声扫描结果汇总表 (Noise Sweep Summary)\n";
+        std::cout << " Noise Sweep Summary\n";
         std::cout << "=================================================\n\n";
 
         // 获取所有策略名称
@@ -271,20 +271,19 @@ public:
         std::cout << "\n";
     }
 
-    // 分析噪声对策略的影响
     static void analyzeNoiseImpact(const std::map<double, std::map<std::string, ScoreStats>>& results) {
         if (results.empty()) return;
 
         std::cout << "\n=================================================\n";
-        std::cout << "   噪声影响分析 (Noise Impact Analysis)\n";
+        std::cout << "   Noise Impact Analysis\n";
         std::cout << "=================================================\n\n";
 
-        // 获取无噪声和最高噪声的结果
+        // Get the results for noise-free and highest-noise conditions
         auto baseline = results.begin()->second;  // ε = 0
-        auto highest = results.rbegin()->second;  // 最高 ε
+        auto highest = results.rbegin()->second;  // highest ε
 
-        std::cout << "性能下降分析 (从 ε=0 到 ε=" << std::fixed << std::setprecision(2) 
-                  << results.rbegin()->first << "):\n\n";
+        std::cout << "Performance Degradation Analysis (from ε=0 to ε=" << std::fixed << std::setprecision(2)
+            << results.rbegin()->first << "):\n\n";
 
         std::vector<std::pair<std::string, double>> performance_drops;
         for (const auto& [name, base_stats] : baseline) {
@@ -294,41 +293,44 @@ public:
             performance_drops.push_back({ name, drop_percent });
         }
 
-        // 按性能下降排序
+        // Sort by performance drop
         std::sort(performance_drops.begin(), performance_drops.end(),
             [](const auto& a, const auto& b) { return a.second > b.second; });
 
         for (const auto& [name, drop] : performance_drops) {
             std::cout << std::setw(15) << std::left << name << ": "
-                << std::fixed << std::setprecision(1) << drop << "% 下降";
-            
+                << std::fixed << std::setprecision(1) << drop << "% drop";
+
             if (drop > 50) {
-                std::cout << "  [严重崩溃]";
-            } else if (drop > 30) {
-                std::cout << "  [显著下降]";
-            } else if (drop > 10) {
-                std::cout << "  [中等影响]";
-            } else {
-                std::cout << "  [稳健]";
+                std::cout << "  [Severe Collapse]";
+            }
+            else if (drop > 30) {
+                std::cout << "  [Significant Decline]";
+            }
+            else if (drop > 10) {
+                std::cout << "  [Moderate Impact]";
+            }
+            else {
+                std::cout << "  [Robust]";
             }
             std::cout << "\n";
         }
 
-        std::cout << "\n策略特性分析:\n\n";
-        std::cout << "[严重崩溃的策略] (> 50%% 下降):\n";
-        std::cout << "   - 通常是不宽容的策略 (如 GRIM)\n";
-        std::cout << "   - 噪声导致永久性背叛循环\n";
-        std::cout << "   - 无法从偶然错误中恢复\n\n";
+        std::cout << "\nStrategy Characteristics Analysis:\n\n";
+        std::cout << "[Severely Collapsed Strategies] (> 50% drop):\n";
+        std::cout << "   - Typically unforgiving strategies (e.g., GRIM)\n";
+        std::cout << "   - Noise triggers irreversible defection loops\n";
+        std::cout << "   - Unable to recover from accidental mistakes\n\n";
 
-        std::cout << "[中等影响的策略] (10-30%% 下降):\n";
-        std::cout << "   - 部分宽容的策略 (如 TFT)\n";
-        std::cout << "   - 能从错误恢复但需要时间\n";
-        std::cout << "   - 可能陷入短期背叛循环\n\n";
+        std::cout << "[Moderately Affected Strategies] (10–30% drop):\n";
+        std::cout << "   - Partially forgiving strategies (e.g., TFT)\n";
+        std::cout << "   - Can recover from mistakes but require time\n";
+        std::cout << "   - May fall into short-term defection loops\n\n";
 
-        std::cout << "[稳健的策略] (< 10%% 下降):\n";
-        std::cout << "   - 宽容且能纠错的策略 (如 CTFT, PAVLOV)\n";
-        std::cout << "   - 能识别并修复噪声导致的错误\n";
-        std::cout << "   - 快速恢复到合作状态\n\n";
+        std::cout << "[Robust Strategies] (< 10% drop):\n";
+        std::cout << "   - Forgiving and error-correcting strategies (e.g., CTFT, PAVLOV)\n";
+        std::cout << "   - Can detect and correct noise-induced errors\n";
+        std::cout << "   - Quickly return to cooperative state\n\n";
     }
 
 private:
