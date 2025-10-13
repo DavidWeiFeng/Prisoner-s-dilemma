@@ -39,6 +39,8 @@ void SimulatorRunner::run() {
         printResults();
         printAnalysisQ1();
     }
+    printResults();
+    //printAnalysisQ1();
 }
 
 // 从策略名称创建策略实例的中心位置。

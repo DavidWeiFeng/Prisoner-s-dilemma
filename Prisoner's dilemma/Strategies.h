@@ -50,6 +50,9 @@ public:
 		return cooperateForever ? Move::Cooperate : Move::Defect;
     }
 	std::string getName() const override { return "GRIM"; }
+    void reset() const override {
+        cooperateForever = true;
+    }
 };
 
 // PAVLOV (Win-Stay-Lose-Shift)
@@ -113,6 +116,9 @@ public:
     }
 
     std::string getName() const override { return "CTFT"; }
+    void reset() const override {
+        contrite = false;
+    }
 };
 
 // 随机策略
@@ -143,54 +149,44 @@ public:
 // PROBER - 探测者策略（剥削型）
 // 特点：通过试探找出可以剥削的对手
 // 行为：
-//   - 前三轮：D, C, C（背叛一次，然后合作两次）
-//   - 如果对手在第2轮和第3轮都合作，则永远背叛（剥削）
+//   - 前四轮：C, D, C, C（合作，背叛，合作，合作）
+//   - 如果对手在第2轮（我方背叛后）仍然合作，则认为可剥削，永远背叛
 //   - 否则，采用 TFT 策略
 class PROBER : public Strategy {
 private:
     mutable bool exploiting = false; // 是否进入剥削模式
-
 public:
     Move decide(const History& history) const override {
         size_t round = history.size();
 
-        // 前三轮的探测行为
+        // 前四轮的探测序列：C, D, C, C
         if (round == 0) {
-            return Move::Defect; // 第1轮：背叛
+            return Move::Cooperate; // 第1轮：合作
         }
         if (round == 1) {
-            return Move::Cooperate; // 第2轮：合作
+            return Move::Defect; // 第2轮：背叛（试探）
         }
         if (round == 2) {
-            // 第3轮：合作，并检查对手是否可以被剥削
-            // 检查对手在第2轮（history[1]）和第3轮（history[2]即将发生）是否都合作
-            // 注意：history[1]是第2轮的结果
-            if (history[1].second == Move::Cooperate) {
-                // 需要再观察一轮才能确定
-                return Move::Cooperate;
-            }
-            return Move::Cooperate;
+            return Move::Cooperate; // 第3轮：合作
         }
-
         // 第4轮开始决定策略
         if (round == 3 && !exploiting) {
-            // 检查对手在第2轮和第3轮是否都合作
-            if (history[1].second == Move::Cooperate && 
-                history[2].second == Move::Cooperate) {
-                exploiting = true; // 发现可剥削对象，进入永久背叛模式
+            if (history[1].second == Move::Cooperate) {
+                    exploiting = true;
             }
+			return Move::Cooperate; // 第4轮：合作
         }
-
         // 如果在剥削模式，永远背叛
         if (exploiting) {
             return Move::Defect;
         }
-
         // 否则使用 TFT 策略
         return history.back().second;
     }
-
     std::string getName() const override { return "PROBER"; }
+    void reset() const  {
+        exploiting = false;
+    }
 };
 
 #endif // STRATEGIES_H
