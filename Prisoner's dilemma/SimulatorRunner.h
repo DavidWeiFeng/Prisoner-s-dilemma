@@ -41,6 +41,8 @@ private:
     // 执行主要的锦标赛或进化模拟。
     void runSimulation();
 
+	void runExploiter();
+
     // 运行噪声扫描实验
     void runNoiseSweep();
 
@@ -50,6 +52,9 @@ private:
     // 打印策略分析
     void printAnalysisQ1() const;
 
+    void printExploiterResults(
+        const std::string& exploiter_name,
+		const std::map<std::string, std::pair<ScoreStats, ScoreStats>>& results) const;
     // 根据策略名称创建策略实例的工厂函数。
     static std::unique_ptr<Strategy> createStrategy(const std::string& name);
 

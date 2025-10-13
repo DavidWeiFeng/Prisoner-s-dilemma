@@ -18,7 +18,9 @@ struct Config {
     double epsilon = 0.0;
     int seed = 42;
     std::vector<double> payoffs = { 5.0, 3.0, 1.0, 0.0 }; // T, R, P, S
-    std::vector<std::string> strategy_names = { "AllCooperate", "AllDefect","TitForTat","GrimTrigger","PAVLOV"};
+    std::vector<std::string> strategy_names = { "AllDefect","AllCooperate","TitForTat","ContriteTitForTat","PAVLOV"};
+
+    //std::vector<std::string> strategy_names = { "AllCooperate", "AllDefect","TitForTat","GrimTrigger","PAVLOV"};
     //std::vector<std::string> strategy_names = { "AllCooperate", "AllDefect","TitForTat","GrimTrigger","PAVLOV","CTFT","PROBER" };
     // 输入/输出参数
     std::string format = "text";
@@ -32,10 +34,14 @@ struct Config {
     double mutation = 0.02;
     
     // 噪声扫描参数
-    bool noise_sweep = true;       // 默认启用噪声扫描
+    bool noise_sweep = false;       // 默认启用噪声扫描
     double noise_min = 0.0;        // 最小噪声水平
     double noise_max = 0.2;        // 最大噪声水平
     double noise_step = 0.05;      // 噪声步长
+
+    //
+	bool  exploiters = true;      // 是否包含剥削者策略
+
 };
 
 #endif // CONFIG_H

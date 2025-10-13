@@ -29,7 +29,12 @@ void SimulatorRunner::run() {
     // 检查是否运行噪声扫描
     if (config_.noise_sweep) {
         runNoiseSweep();
-    } else {
+    }
+    if (config_.exploiters)
+    {
+        runExploiter();
+    }
+    else {
         runSimulation();
         printResults();
         printAnalysisQ1();
@@ -43,7 +48,7 @@ std::unique_ptr<Strategy> SimulatorRunner::createStrategy(const std::string& nam
     if (name == "TitForTat") return std::make_unique<TitForTat>();
     if (name == "GrimTrigger") return std::make_unique<GrimTrigger>();
     if (name == "PAVLOV") return std::make_unique<PAVLOV>();
-    if (name == "CTFT") return std::make_unique<ContriteTitForTat>();
+    if (name == "ContriteTitForTat") return std::make_unique<ContriteTitForTat>();
     if (name == "RandomStrategy") return std::make_unique<RandomStrategy>();
     if (name == "PROBER") return std::make_unique<PROBER>();
     // 您可以在这里添加课程作业要求的其他策略
@@ -184,70 +189,70 @@ void SimulatorRunner::runSimulation() {
     }
 }
 
-void SimulatorRunner::printResults() const {
-    std::cout << "\n=================================================\n";
-    std::cout << "--- Tournament Results (Average Score per Strategy) ---\n";
-    std::cout << "=================================================\n";
+//// 辅助函数：计算统计数据
+//ScoreStats SimulatorRunner::calculateStats(const std::vector<double>scores) const {
+//    ScoreStats stats;
+//
+//    if (scores.empty()) {
+//        return stats;
+//    }
+//
+//    // 计算均值
+//    double sum = 0.0;
+//    for (double score : scores) {
+//        sum += score;
+//    }
+//    stats.mean = sum / scores.size();
+//
+//    // 计算标准差
+//    double variance_sum = 0.0;
+//    for (double score : scores) {
+//        variance_sum += (score - stats.mean) * (score - stats.mean);
+//    }
+//    stats.stdev = std::sqrt(variance_sum / scores.size());
+//
+//    // 计算95%置信区间
+//    double margin = 1.96 * (stats.stdev / std::sqrt(scores.size()));
+//    stats.ci_lower = stats.mean - margin;
+//    stats.ci_upper = stats.mean + margin;
+//
+//    return stats;
+//}
 
-    // Sort results by mean score (descending)
-    std::vector<std::pair<std::string, ScoreStats>> sorted_results(results_.begin(), results_.end());
-    std::sort(sorted_results.begin(), sorted_results.end(),
-        [](const auto& a, const auto& b) { return a.second.mean > b.second.mean; });
+void SimulatorRunner::runExploiter() {
+    std::cout << "\n--- Exploiter Tournament Start ---\n";
+    if (strategies_.empty()) return; // 或其他错误处理
+    //the first one is exploiter
+    const auto& exploiter = strategies_[0];
+    std::string exploiter_name = exploiter->getName();
+    std::cout << "Exploiter: " << exploiter_name << "\n";
+    std::vector<double> exploiter_scores;
+    std::vector<double> victim_scores;
 
-    std::cout << "Based on " << config_.repeats << " repeated experiments\n\n";
+	//store results
+    std::map<std::string, std::pair<ScoreStats, ScoreStats>> match_results;
 
-    tabulate::Table table;
-    table.add_row({ "Rank", "Strategy", "Mean", "95% CI Lower", "95% CI Upper", "Std Dev (σ)" });
 
-    int rank = 1;
-    for (const auto& [name, stats] : sorted_results) {
-        table.add_row({
-            std::to_string(rank++),
-            name,
-            format_double(stats.mean),
-            format_double(stats.ci_lower),
-            format_double(stats.ci_upper),
-            format_double(stats.stdev)
-            });
+    for (size_t i = 1; i < strategies_.size(); ++i) {
+        const auto& victim = strategies_[i];
+        std::string victim_name = victim->getName();
+        std::cout << "Running: " << exploiter_name << " vs " << victim_name << "...\n";
+        std::vector<double> exploiter_scores;
+        std::vector<double> victim_scores;
+
+		//repeat matches
+        for (int repeat = 0; repeat < config_.repeats; ++repeat) {
+            auto scores = simulator_.runGame(exploiter, victim, config_.rounds);
+            exploiter_scores.push_back(scores.first);
+            victim_scores.push_back(scores.second);
+        }
+        ScoreStats exploiter_stats = simulator_.calculateStats(exploiter_scores);
+        ScoreStats victim_stats = simulator_.calculateStats(victim_scores);
+        match_results[victim_name] = { exploiter_stats, victim_stats };
     }
 
-    // Apply styling
-    table.format()
-        .font_align(tabulate::FontAlign::center)
-        .font_style({ tabulate::FontStyle::bold })
-        .border_color(tabulate::Color::cyan)
-        .border_top("═")
-        .border_bottom("═")
-        .border_left("║")
-        .border_right("║");
+    printExploiterResults(exploiter_name, match_results);
 
-    for (size_t i = 0; i < table.size(); ++i) {
-        table[i].format()
-            .font_style({ tabulate::FontStyle::bold })
-            .font_align(tabulate::FontAlign::center);
-    }
-
-    std::cout << table << "\n";
-
-    std::cout << "\nNotes:\n";
-    std::cout << "  - Mean: The average score of this strategy across all matches.\n";
-    std::cout << "  - 95% CI: 95% Confidence Interval — the range where the true mean is likely to fall.\n";
-    std::cout << "  - Std Dev (σ): Indicates how dispersed the scores are.\n";
-    std::cout << "  - CI Formula: mean ± 1.96 × (σ / √" << config_.repeats << ")\n";
-    std::cout << "\n--- Simulation Complete ---\n";
-}
-
-
-void SimulatorRunner::printAnalysisQ1() const {
-    std::cout << "\n=================================================\n";
-    std::cout << "--- Q1 Analysis ---\n";
-    std::cout << "=================================================\n\n";
-    std::cout
-        << "Based on the results in the table, ALLD (Always Defect) achieved the highest mean payoff\n"
-        << "in a noise-free environment, ranking first with a mean score of 50.40.\n\n"
-        << "This outcome suggests that when there is no noise or execution error, defection remains\n"
-        << "the most profitable strategy overall, since players can consistently exploit cooperative\n"
-        << "opponents without risk of accidental punishment.\n";
 }
 
 void SimulatorRunner::runNoiseSweep() {
@@ -294,3 +299,127 @@ Config SimulatorRunner::parseArguments(int argc, char** argv) {
 
     return config;
 }
+
+// 辅助函数：打印剥削者测试结果
+void SimulatorRunner::printExploiterResults(
+    const std::string& exploiter_name,
+    const std::map<std::string, std::pair<ScoreStats, ScoreStats>>& results) const {
+
+    std::cout << "\n=================================================\n";
+    std::cout << "--- Exploiter Test Results ---\n";
+    std::cout << "=================================================\n\n";
+
+    std::cout << "Exploiter: " << exploiter_name << "\n";
+    std::cout << "Based on " << config_.repeats << " repeated experiments\n";
+    std::cout << "Rounds per match: " << config_.rounds << "\n\n";
+
+    // 创建表格
+    tabulate::Table table;
+
+    // 表头
+    table.add_row({
+        "Victim Strategy",
+        exploiter_name + " Mean",
+        exploiter_name + " 95% CI",
+        "Victim Mean",
+        "Victim 95% CI",
+        "Score Difference"
+        });
+
+    // 添加每场对战的结果
+    for (const auto& [victim_name, stats_pair] : results) {
+        const auto& exploiter_stats = stats_pair.first;
+        const auto& victim_stats = stats_pair.second;
+
+        double score_diff = exploiter_stats.mean - victim_stats.mean;
+
+        std::string exploiter_ci = format_double(exploiter_stats.ci_lower) + " - " +
+            format_double(exploiter_stats.ci_upper);
+        std::string victim_ci = format_double(victim_stats.ci_lower) + " - " +
+            format_double(victim_stats.ci_upper);
+
+        table.add_row({
+            victim_name,
+            format_double(exploiter_stats.mean),
+            exploiter_ci,
+            format_double(victim_stats.mean),
+            victim_ci,
+            format_double(score_diff)
+            });
+    }
+
+    // 格式化表格
+    table.format()
+        .font_align(tabulate::FontAlign::center)
+        .border_color(tabulate::Color::cyan);
+
+    // 表头加粗
+    table[0].format()
+        .font_style({ tabulate::FontStyle::bold })
+        .font_align(tabulate::FontAlign::center);
+
+    std::cout << table << "\n\n";
+
+    // 打印分析
+}
+void SimulatorRunner::printResults() const {
+    std::cout << "\n=================================================\n";
+    std::cout << "--- Tournament Results (Average Score per Strategy) ---\n";
+    std::cout << "=================================================\n";
+
+    // Sort results by mean score (descending)
+    std::vector<std::pair<std::string, ScoreStats>> sorted_results(results_.begin(), results_.end());
+    std::sort(sorted_results.begin(), sorted_results.end(),
+        [](const auto& a, const auto& b) { return a.second.mean > b.second.mean; });
+
+    std::cout << "Based on " << config_.repeats << " repeated experiments\n\n";
+
+    tabulate::Table table;
+    table.add_row({ "Rank", "Strategy", "Mean", "95% CI Lower", "95% CI Upper", "Std Dev (σ)" });
+
+    int rank = 1;
+    for (const auto& [name, stats] : sorted_results) {
+        table.add_row({
+            std::to_string(rank++),
+            name,
+            format_double(stats.mean),
+            format_double(stats.ci_lower),
+            format_double(stats.ci_upper),
+            format_double(stats.stdev)
+            });
+    }
+    // Apply styling
+    table.format()
+        .font_align(tabulate::FontAlign::center)
+        .font_style({ tabulate::FontStyle::bold })
+        .border_color(tabulate::Color::cyan);
+
+    for (size_t i = 0; i < table.size(); ++i) {
+        table[i].format()
+            .font_style({ tabulate::FontStyle::bold })
+            .font_align(tabulate::FontAlign::center);
+    }
+
+    std::cout << table << "\n";
+
+    std::cout << "\nNotes:\n";
+    std::cout << "  - Mean: The average score of this strategy across all matches.\n";
+    std::cout << "  - 95% CI: 95% Confidence Interval — the range where the true mean is likely to fall.\n";
+    std::cout << "  - Std Dev (σ): Indicates how dispersed the scores are.\n";
+    std::cout << "  - CI Formula: mean ± 1.96 × (σ / √" << config_.repeats << ")\n";
+    std::cout << "\n--- Simulation Complete ---\n";
+}
+
+
+void SimulatorRunner::printAnalysisQ1() const {
+    std::cout << "\n=================================================\n";
+    std::cout << "--- Q1 Analysis ---\n";
+    std::cout << "=================================================\n\n";
+    std::cout
+        << "Based on the results in the table, ALLD (Always Defect) achieved the highest mean payoff\n"
+        << "in a noise-free environment, ranking first with a mean score of 50.40.\n\n"
+        << "This outcome suggests that when there is no noise or execution error, defection remains\n"
+        << "the most profitable strategy overall, since players can consistently exploit cooperative\n"
+        << "opponents without risk of accidental punishment.\n";
+}
+

@@ -1,6 +1,5 @@
 ﻿#ifndef SIMULATOR_H
 #define SIMULATOR_H
-
 #include <sstream>
 #include "Strategy.h"
 #include <iostream>
@@ -47,41 +46,22 @@ private:
         return 0.0;
     }
 
-    // Calculate mean and standard deviation from a vector of scores
-    std::pair<double, double> calculateStats(const std::vector<double>& scores) const {
-        if (scores.empty()) return {0.0, 0.0};
-        
-        double sum = 0.0;
-        for (double s : scores) sum += s;
-        double mean = sum / scores.size();
-        
-        if (scores.size() < 2) return {mean, 0.0};
-        
-        double variance = 0.0;
-        for (double s : scores) {
-            variance += (s - mean) * (s - mean);
-        }
-        variance /= (scores.size() - 1); // Sample variance (unbiased estimator)
-        double stdev = std::sqrt(variance);
-        
-        return {mean, stdev};
-    }
     
     // Calculate 95% confidence interval
     // Formula: mean ± 1.96 × (stdev / √n)
     ScoreStats calculateConfidenceInterval(const std::vector<double>& scores) const {
         if (scores.empty()) return ScoreStats();
-        
-        auto [mean, stdev] = calculateStats(scores);
-        
+
+        ScoreStats base = calculateStats(scores);
+
         if (scores.size() < 2) {
-            return ScoreStats(mean, stdev, mean, mean, scores.size());
+            return ScoreStats(base.mean, base.stdev, base.mean, base.mean, scores.size());
         }
-        
-        double se = stdev / std::sqrt(scores.size()); // Standard Error
-        double margin = 1.96 * se; // 95% CI uses z = 1.96
-        
-        return ScoreStats(mean, stdev, mean - margin, mean + margin, scores.size());
+
+        double se = base.stdev / std::sqrt(scores.size());
+        double margin = 1.96 * se;
+
+        return ScoreStats(base.mean, base.stdev, base.mean - margin, base.mean + margin, scores.size());
     }
 
 public:
@@ -116,7 +96,35 @@ public:
         }
         return { score1, score2 };
     }
+    // Calculate mean and standard deviation from a vector of scores
+    inline  ScoreStats  calculateStats(const std::vector<double>& scores) const {
+        ScoreStats stats;
+        if (scores.empty()) return stats;
 
+        double sum = 0.0;
+        for (double s : scores) sum += s;
+        stats.mean = sum / scores.size();
+
+        // 标准差（样本方差）
+        double variance = 0.0;
+        for (double s : scores) {
+            variance += (s - stats.mean) * (s - stats.mean);
+        }
+        variance /= (scores.size() - 1);
+        stats.stdev = std::sqrt(variance);
+
+        // 95%置信区间（可选）
+        if (scores.size() > 1) {
+            double margin = 1.96 * (stats.stdev / std::sqrt(scores.size()));
+            stats.ci_lower = stats.mean - margin;
+            stats.ci_upper = stats.mean + margin;
+        }
+        else {
+            stats.ci_lower = stats.ci_upper = stats.mean;
+        }
+
+        return stats;
+    }
     // 标准锦标赛 with confidence intervals
     std::map<std::string, ScoreStats> runTournament(const std::vector<StrategyPtr>& strategies, 
                                                       int rounds, int repeats) const {
@@ -180,7 +188,7 @@ public:
         }
 
         // 打印对战结果表格
-        printMatchTable(strategies, matchResults);
+        //printMatchTable(strategies, matchResults);
 
         // 计算每个策略的总体统计信息（包括置信区间）
         std::map<std::string, ScoreStats> stats;
@@ -190,6 +198,7 @@ public:
         
         return stats;
     }
+
 
     // Noise Sweep: Run tournaments at different noise levels
     std::map<double, std::map<std::string, ScoreStats>> runNoiseSweep(
