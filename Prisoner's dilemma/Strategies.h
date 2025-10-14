@@ -10,6 +10,10 @@ public:
         return Move::Cooperate;
 	}
     std::string getName() const override { return "ALLC"; }
+    std::unique_ptr<Strategy> clone() const override {
+        return std::make_unique<AllCooperate>(*this);
+    }
+
 };
 
 // 永远背叛 (ALLD)
@@ -19,6 +23,9 @@ public:
 		return Move::Defect;
     }
     std::string getName() const override { return "ALLD"; }
+    std::unique_ptr<Strategy> clone() const override {
+        return std::make_unique<AllDefect>(*this);
+    }
 };
 
 // TFT (Tit-For-Tat)
@@ -31,6 +38,10 @@ public:
 		return history.back().second; // 模仿对手上次动作
     }
 	std::string getName() const override { return "TFT"; }
+
+    std::unique_ptr<Strategy> clone() const override {
+        return std::make_unique<TitForTat>(*this);
+    }
 };
 
 // GRIM (Grim Trigger)
@@ -53,6 +64,9 @@ public:
     void reset() const override {
         cooperateForever = true;
     }
+    std::unique_ptr<Strategy> clone() const override {
+        return std::make_unique<GrimTrigger>(*this);
+    }
 };
 
 // PAVLOV (Win-Stay-Lose-Shift)
@@ -73,6 +87,9 @@ public:
         }
     }
     std::string getName() const override { return "PAVLOV"; }
+    std::unique_ptr<Strategy> clone() const override {
+        return std::make_unique<PAVLOV>(*this);
+    }
 };
 
 // CTFT (Contrite Tit-For-Tat) - 悔悟的针锋相对
@@ -120,6 +137,9 @@ public:
     void reset() const override {
         contrite = false;
     }
+    std::unique_ptr<Strategy> clone() const override {
+        return std::make_unique<ContriteTitForTat>(*this);
+    }
 
 };
 
@@ -145,6 +165,10 @@ public:
 
     std::string getName() const override {
         return "RND(prob:" + std::to_string(p) + ")";
+    }
+
+    std::unique_ptr<Strategy> clone() const override {
+        return std::make_unique<RandomStrategy>(*this);
     }
 };
 
@@ -188,6 +212,9 @@ public:
     std::string getName() const override { return "PROBER"; }
     void reset() const {
         exploiting = false;
+    }
+    std::unique_ptr<Strategy> clone() const override {
+        return std::make_unique<PROBER>(*this);
     }
 };
 

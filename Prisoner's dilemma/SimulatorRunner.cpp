@@ -53,14 +53,12 @@ std::unique_ptr<Strategy> SimulatorRunner::createStrategy(const std::string& nam
 
 // 设置锦标赛中要使用的策略。
 void SimulatorRunner::setupStrategies() {
+	Strategy::setNoise(config_.epsilon); // 设置全局噪声水平
     for (const auto& name : config_.strategy_names) {
         auto strat = createStrategy(name);
         if (!strat) {
             throw std::runtime_error("发现未知策略: " + name);
         }
-        // 设置噪声水平
-        strat->setNoise(config_.epsilon);
-		// 设置随机种子（如果适用）
 		strat->setSeed(config_.seed);
         strategies_.push_back(std::move(strat));
     }

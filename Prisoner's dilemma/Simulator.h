@@ -110,28 +110,24 @@ public:
         return stats;
     }
     // 标准锦标赛 with confidence intervals
-    std::map<std::string, ScoreStats> runTournament(const std::vector<StrategyPtr>& strategies, 
-                                                      int rounds, int repeats) const {
-        std::map<std::string, std::vector<double>> allScores; // Track all scores for CI calculation
-        std::map<std::string, int> matchCounts;
 
+    std::map<std::string, ScoreStats> runTournament(const std::vector<StrategyPtr>& strategies,  int rounds, int repeats) const {
+		std::map<std::string, std::vector<double>> allScores; // add all scores for each strategy
         // 初始化
         for (const auto& s : strategies) {
             allScores[s->getName()] = std::vector<double>();
-            matchCounts[s->getName()] = 0;
         }
 
         // 存储详细对战结果用于表格显示
         int N = strategies.size();
         std::vector<std::vector<ScorePair>> matchResults(N, std::vector<ScorePair>(N));
 
-
         // 循环赛：每个策略两两对战
         for (size_t i = 0; i < strategies.size(); ++i) {
             for (size_t j = i; j < strategies.size(); ++j) {
                 const auto& p1 = strategies[i];
                 const auto& p2 = strategies[j];
-                
+      
                 std::vector<double> p1_scores;
                 std::vector<double> p2_scores;
 
@@ -144,7 +140,6 @@ public:
                     p1_scores.push_back(scores.first);
                     p2_scores.push_back(scores.second);
                     
-                    // Store for overall statistics
                     // 修复: 当策略对战自己时(i==j)，只添加一次分数
                     if (i == j) {
                         // 同一策略对战自己，两个分数相同，只添加一次
@@ -166,11 +161,6 @@ public:
                 matchResults[i][j] = { avg_score1, avg_score2 };
                 if (i != j) {
                     matchResults[j][i] = { avg_score2, avg_score1 };
-                }
-
-                matchCounts[p1->getName()] += repeats;
-                if (i != j) {
-                    matchCounts[p2->getName()] += repeats;
                 }
             }
         }
@@ -204,12 +194,7 @@ public:
         for (double epsilon : noise_levels) {
             std::cout << "\n--- Testing noise level ε = " << std::fixed << std::setprecision(2)
                 << epsilon << " ---\n";
-
-            // Set noise for all strategies
-            for (auto& s : strategies) {
-                s->setNoise(epsilon);
-            }
-
+			Strategy::setNoise(epsilon); // Set static noise level
             // Run the tournament
             std::map<std::string, ScoreStats> tournamentResults = runTournament(strategies, rounds, repeats);
             results[epsilon] = tournamentResults;

@@ -13,8 +13,8 @@
  */
 struct Config {
     // 锦标赛参数
-    int rounds = 100;
-    int repeats = 1;
+    int rounds = 10;
+    int repeats = 2;
     double epsilon = 0.0;
     int seed = 42;
     std::vector<double> payoffs = { 5.0, 3.0, 1.0, 0.0 }; // T, R, P, S
