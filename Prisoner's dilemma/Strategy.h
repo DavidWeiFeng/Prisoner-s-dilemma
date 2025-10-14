@@ -29,11 +29,17 @@ public:
     virtual std::string getName() const = 0;
 
     Move applyNoise(Move move) const {
+        if (noise == 0)
+        {
+            return move;
+        }
         if (dist(gen) < noise) {
             return move == Move::Cooperate ? Move::Defect : Move::Cooperate;
         }
         return move;
     };
+
+    virtual void reset() const {};
 
     Move decideWithNoise(const History& history) const {
         return applyNoise(decide(history));

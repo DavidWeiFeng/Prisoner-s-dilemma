@@ -181,43 +181,8 @@ void SimulatorRunner::printPayoffMatrix() const {
 
 void SimulatorRunner::runSimulation() {
     std::cout << "\n--- Tournament Start ---\n";
-    if (config_.evolve) {
-        std::cout << "Evolution mode selected (feature not yet implemented).\n";
-    }
-    else {
-        results_ = simulator_.runTournament(strategies_, config_.rounds, config_.repeats);
-    }
+    results_ = simulator_.runTournament(strategies_, config_.rounds, config_.repeats);
 }
-
-//// 辅助函数：计算统计数据
-//ScoreStats SimulatorRunner::calculateStats(const std::vector<double>scores) const {
-//    ScoreStats stats;
-//
-//    if (scores.empty()) {
-//        return stats;
-//    }
-//
-//    // 计算均值
-//    double sum = 0.0;
-//    for (double score : scores) {
-//        sum += score;
-//    }
-//    stats.mean = sum / scores.size();
-//
-//    // 计算标准差
-//    double variance_sum = 0.0;
-//    for (double score : scores) {
-//        variance_sum += (score - stats.mean) * (score - stats.mean);
-//    }
-//    stats.stdev = std::sqrt(variance_sum / scores.size());
-//
-//    // 计算95%置信区间
-//    double margin = 1.96 * (stats.stdev / std::sqrt(scores.size()));
-//    stats.ci_lower = stats.mean - margin;
-//    stats.ci_upper = stats.mean + margin;
-//
-//    return stats;
-//}
 
 void SimulatorRunner::runExploiter() {
     std::cout << "\n--- Exploiter Tournament Start ---\n";

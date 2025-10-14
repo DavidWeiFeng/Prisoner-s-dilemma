@@ -79,20 +79,23 @@ public:
 
     // 运行单场比赛，考虑噪声
     ScorePair runGame(const StrategyPtr& p1, const StrategyPtr& p2, int rounds) const {
-        History history;
+        History history1;// player1 的视角：{我的动作, 对手的动作}
+        History history2;
         double score1 = 0.0;
         double score2 = 0.0;
         
         for (int i = 1; i <= rounds; ++i) {
             // 使用 decideWithNoise 方法获取带噪声的决策
-            Move move1 = p1->decideWithNoise(history);
-            Move move2 = p2->decideWithNoise(history);
+            Move move1 = p1->decideWithNoise(history1);
+            Move move2 = p2->decideWithNoise(history2);
             
             double round_score1 = getScore(move1, move2);
             double round_score2 = getScore(move2, move1);
             score1 += round_score1;
             score2 += round_score2;
-            history.push_back({ move1, move2 });
+            // update history,from each player's perspective
+            history1.push_back({ move1, move2 });  // player1: 我出move1，对手出move2
+            history2.push_back({ move2, move1 });  // player2: 我出move2，
         }
         return { score1, score2 };
     }
@@ -152,6 +155,10 @@ public:
                 std::vector<double> p2_scores;
 
                 for (int r = 0; r < repeats; ++r) {
+                    //to clean flag state
+                    p1.get()->reset();
+                    p2.get()->reset();
+
                     ScorePair scores = runGame(p1, p2, rounds);
                     p1_scores.push_back(scores.first);
                     p2_scores.push_back(scores.second);
@@ -187,8 +194,8 @@ public:
             }
         }
 
-        // 打印对战结果表格
-        //printMatchTable(strategies, matchResults);
+         //打印对战结果表格
+        printMatchTable(strategies, matchResults);
 
         // 计算每个策略的总体统计信息（包括置信区间）
         std::map<std::string, ScoreStats> stats;
