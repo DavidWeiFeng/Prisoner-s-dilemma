@@ -198,8 +198,6 @@ void SimulatorRunner::runExploiter() {
     for (size_t i = 1; i < strategies_.size(); ++i) {
         const auto& victim = strategies_[i];
         std::string victim_name = victim->getName();
-        std::cout << "Running: " << exploiter_name << " vs " << victim_name << "...\n";
-
         std::vector<double> exploiter_scores_this_match;
         std::vector<double> victim_scores_this_match;
 
@@ -226,8 +224,6 @@ void SimulatorRunner::runExploiter() {
     }
 	//print averge table
     printExploiterMatchTable(exploiter_name, matchAverages);
-
-
 
     results_.clear();
     for (const auto& [name, scores] : allScores) {
@@ -340,7 +336,7 @@ void SimulatorRunner::printResults() const {
     std::cout << "Based on " << config_.repeats << " repeated experiments\n\n";
 
     tabulate::Table table;
-    table.add_row({ "Rank", "Strategy", "Mean", "95% CI Lower", "95% CI Upper", "Std Dev (σ)" });
+    table.add_row({ "Rank", "Strategy", "Mean", "95% CI Lower", "95% CI Upper", "Std Dev" });
 
     int rank = 1;
     for (const auto& [name, stats] : sorted_results) {
@@ -366,13 +362,6 @@ void SimulatorRunner::printResults() const {
     }
 
     std::cout << table << "\n";
-
-    std::cout << "\nNotes:\n";
-    std::cout << "  - Mean: The average score of this strategy across all matches.\n";
-    std::cout << "  - 95% CI: 95% Confidence Interval — the range where the true mean is likely to fall.\n";
-    std::cout << "  - Std Dev (σ): Indicates how dispersed the scores are.\n";
-    std::cout << "  - CI Formula: mean ± 1.96 × (σ / √" << config_.repeats << ")\n";
-    std::cout << "\n--- Simulation Complete ---\n";
 }
 
 
