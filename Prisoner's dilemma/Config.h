@@ -19,10 +19,13 @@ struct Config {
     int seed = 42;
     std::vector<double> payoffs = { 5.0, 3.0, 1.0, 0.0 }; // T, R, P, S
 
-    std::vector<std::string> strategy_names = { "AllDefect","AllCooperate","TitForTat","ContriteTitForTat","PAVLOV"};
+    
     //std::vector<std::string> strategy_names = { "AllCooperate", "AllDefect","TitForTat","GrimTrigger","PAVLOV"};
     //std::vector<std::string> strategy_names = { "AllCooperate", "AllDefect","TitForTat","GrimTrigger","PAVLOV","CTFT","PROBER" };
-    // 输入/输出参数
+
+     //std::vector<std::string> strategy_names = { "AllDefect","AllCooperate","TitForTat","ContriteTitForTat","PAVLOV"};
+     std::vector<std::string> strategy_names = { "PROBER","AllCooperate","TitForTat" };
+
 
     std::string format = "text";
     std::string save_file;
