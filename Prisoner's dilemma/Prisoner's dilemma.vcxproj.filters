@@ -9,10 +9,6 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
     </Filter>
-    <Filter Include="资源文件">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Strategy.h">
@@ -30,41 +26,16 @@
     <ClInclude Include="Config.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="SimulatorRunner.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="SimulatorRunner.h">
-      <Filter>头文件</Filter>
-    </ClCompile>
     <ClCompile Include="SimulatorRunner.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Q3_EXPERIMENTS.md" />
-    <None Include="run_q3_prober_vs_allc.bat">
-      <Filter>源文件</Filter>
-    </None>
-    <None Include="run_q3_prober_vs_tft.bat">
-      <Filter>源文件</Filter>
-    </None>
-    <None Include="run_q3_mixed_population.bat">
-      <Filter>源文件</Filter>
-    </None>
-    <None Include="run_q3_noise_sweep.bat">
-      <Filter>源文件</Filter>
-    </None>
-    <None Include="run_q3_full_suite.bat">
-      <Filter>源文件</Filter>
-    </None>
-    <None Include="Q3_IMPLEMENTATION_SUMMARY.md" />
-    <None Include="Q3_QUICK_GUIDE.md" />
-    <None Include="CONFIDENCE_INTERVALS.md" />
-    <None Include="CI_EXAMPLES.md" />
-    <None Include="CI_IMPLEMENTATION_SUMMARY.md" />
-    <None Include="CI_QUICK_REFERENCE.md" />
-    <None Include="BUG_FIX_DOUBLE_COUNTING.md" />
   </ItemGroup>
 </Project>

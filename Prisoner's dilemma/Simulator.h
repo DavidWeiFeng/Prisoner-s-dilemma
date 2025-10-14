@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <cmath>
 #include <tabulate/table.hpp>
+#include <numeric>
 
 using ScorePair = std::pair<double, double>;
 using StrategyPtr = std::unique_ptr<Strategy>;
@@ -44,24 +45,6 @@ private:
         if (m1 == Move::Defect && m2 == Move::Defect) { return payoff_config[2]; }//P
         if (m1 == Move::Cooperate && m2 == Move::Defect) { return payoff_config[3]; }//S
         return 0.0;
-    }
-
-    
-    // Calculate 95% confidence interval
-    // Formula: mean ± 1.96 × (stdev / √n)
-    ScoreStats calculateConfidenceInterval(const std::vector<double>& scores) const {
-        if (scores.empty()) return ScoreStats();
-
-        ScoreStats base = calculateStats(scores);
-
-        if (scores.size() < 2) {
-            return ScoreStats(base.mean, base.stdev, base.mean, base.mean, scores.size());
-        }
-
-        double se = base.stdev / std::sqrt(scores.size());
-        double margin = 1.96 * se;
-
-        return ScoreStats(base.mean, base.stdev, base.mean - margin, base.mean + margin, scores.size());
     }
 
 public:
@@ -100,29 +83,27 @@ public:
         return { score1, score2 };
     }
     // Calculate mean and standard deviation from a vector of scores
-    inline  ScoreStats  calculateStats(const std::vector<double>& scores) const {
+    inline ScoreStats calculateStats(const std::vector<double>& scores) const {
         ScoreStats stats;
+        stats.n_samples = scores.size();
         if (scores.empty()) return stats;
 
-        double sum = 0.0;
-        for (double s : scores) sum += s;
-        stats.mean = sum / scores.size();
+        double sum = std::accumulate(scores.begin(), scores.end(), 0.0);
+        stats.mean = sum / stats.n_samples;
 
-        // 标准差（样本方差）
-        double variance = 0.0;
-        for (double s : scores) {
-            variance += (s - stats.mean) * (s - stats.mean);
-        }
-        variance /= (scores.size() - 1);
-        stats.stdev = std::sqrt(variance);
+        if (stats.n_samples > 1) {
+            double variance = 0.0;
+            for (double s : scores)
+                variance += (s - stats.mean) * (s - stats.mean);
+            variance /= (stats.n_samples - 1);
+            stats.stdev = std::sqrt(variance);
 
-        // 95%置信区间（可选）
-        if (scores.size() > 1) {
-            double margin = 1.96 * (stats.stdev / std::sqrt(scores.size()));
+            double margin = 1.96 * (stats.stdev / std::sqrt(stats.n_samples));
             stats.ci_lower = stats.mean - margin;
             stats.ci_upper = stats.mean + margin;
         }
         else {
+            stats.stdev = 0.0;
             stats.ci_lower = stats.ci_upper = stats.mean;
         }
 
@@ -200,7 +181,7 @@ public:
         // 计算每个策略的总体统计信息（包括置信区间）
         std::map<std::string, ScoreStats> stats;
         for (const auto& [name, scores] : allScores) {
-            stats[name] = calculateConfidenceInterval(scores);
+            stats[name] = calculateStats(scores);
         }
         
         return stats;

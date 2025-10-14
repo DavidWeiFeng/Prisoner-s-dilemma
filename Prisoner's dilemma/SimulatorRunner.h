@@ -43,8 +43,6 @@ private:
 
 	void runExploiter();
 
-    // 运行噪声扫描实验
-    void runNoiseSweep();
 
     // 以用户指定的格式打印最终结果。
     void printResults() const;

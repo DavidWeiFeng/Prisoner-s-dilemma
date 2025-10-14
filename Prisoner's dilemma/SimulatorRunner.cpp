@@ -25,11 +25,7 @@ void SimulatorRunner::run() {
     setupStrategies();
     printConfiguration();
     printPayoffMatrix();
-    
-    // 检查是否运行噪声扫描
-    if (config_.noise_sweep) {
-        runNoiseSweep();
-    }
+
     if (config_.exploiters)
     {
         runExploiter();
@@ -85,18 +81,7 @@ void SimulatorRunner::printConfiguration() const {
     // --- Simulation Configuration ---
     table.add_row({ "Rounds per match", std::to_string(config_.rounds) });
     table.add_row({ "Repeats per match", std::to_string(config_.repeats) });
-
-    if (config_.noise_sweep) {
-        table.add_row({ "Noise sweep mode", "Enabled" });
-        table.add_row({ "Noise range",
-            std::to_string(config_.noise_min) + " to " +
-            std::to_string(config_.noise_max) +
-            " (step: " + std::to_string(config_.noise_step) + ")" });
-    }
-    else {
-        table.add_row({ "Noise (Epsilon)", std::to_string(config_.epsilon) });
-    }
-
+    table.add_row({ "Epsilon",std::to_string(config_.epsilon) });
     table.add_row({ "Random seed", std::to_string(config_.seed) });
 
     // Payoffs
@@ -220,18 +205,6 @@ void SimulatorRunner::runExploiter() {
 
 }
 
-void SimulatorRunner::runNoiseSweep() {
-    std::vector<double> noise_levels;
-    for (double eps = config_.noise_min; eps <= config_.noise_max + 0.001; eps += config_.noise_step) {
-        noise_levels.push_back(eps);
-    }
-
-    auto results = simulator_.runNoiseSweep(strategies_, config_.rounds, config_.repeats, noise_levels);
-    
-    Simulator::printNoiseSweepTable(results);
-    Simulator::analyzeNoiseImpact(results);
-}
-
 Config SimulatorRunner::parseArguments(int argc, char** argv) {
     CLI::App app{ "Iterated Prisoner's Dilemma Simulator" };
     Config config;
@@ -249,12 +222,6 @@ Config SimulatorRunner::parseArguments(int argc, char** argv) {
     app.add_option("--population", config.population, "Population size for the evolutionary simulation.");
     app.add_option("--generations", config.generations, "Number of generations for the evolutionary simulation.");
     app.add_option("--mutation", config.mutation, "Mutation rate for the evolutionary simulation.");
-
-    app.add_flag("--noise-sweep", config.noise_sweep, "Enable noise sweep mode.");
-    app.add_option("--noise-min", config.noise_min, "Minimum value for noise sweep.");
-    app.add_option("--noise-max", config.noise_max, "Maximum value for noise sweep.");
-    app.add_option("--noise-step", config.noise_step, "Step size for noise sweep.");
-
     try {
         app.parse(argc, argv);
     }
