@@ -29,11 +29,12 @@ void SimulatorRunner::run() {
     if (config_.exploiters)
     {
         runExploiter();
+        printResults();
     }
     else {
         runSimulation();
         printResults();
-        printAnalysisQ1();
+        //printAnalysisQ1();
     }
 }
 
@@ -171,37 +172,71 @@ void SimulatorRunner::runExploiter() {
     std::cout << "\n--- Exploiter Tournament Start ---\n";
     if (strategies_.empty()) return; // 或其他错误处理
     //the first one is exploiter
+
+    //the fitst one is exploiter
     const auto& exploiter = strategies_[0];
     std::string exploiter_name = exploiter->getName();
     std::cout << "Exploiter: " << exploiter_name << "\n";
-    std::vector<double> exploiter_scores;
-    std::vector<double> victim_scores;
+    std::cout << "Victims: ";
+    for (size_t i = 1; i < strategies_.size(); ++i) {
+        std::cout << strategies_[i]->getName();
+        if (i < strategies_.size() - 1) std::cout << ", ";
+    }
+    std::cout << "\n\n";
 
-	//store results
-    std::map<std::string, std::pair<ScoreStats, ScoreStats>> match_results;
+    // 存储所有策略的分数
+    std::map<std::string, std::vector<double>> allScores;
+    allScores[exploiter_name] = std::vector<double>();
 
+    std::map<std::string, std::pair<double, double>> matchAverages; // victim_name -> (exploiter_avg, victim_avg)
+
+    // 初始化每个受害者的分数向量
+    for (size_t i = 1; i < strategies_.size(); ++i) {
+        allScores[strategies_[i]->getName()] = std::vector<double>();
+    }
 
     for (size_t i = 1; i < strategies_.size(); ++i) {
         const auto& victim = strategies_[i];
         std::string victim_name = victim->getName();
         std::cout << "Running: " << exploiter_name << " vs " << victim_name << "...\n";
-        std::vector<double> exploiter_scores;
-        std::vector<double> victim_scores;
 
-		//repeat matches
-        for (int repeat = 0; repeat < config_.repeats; ++repeat) {
-            auto scores = simulator_.runGame(exploiter, victim, config_.rounds);
-            exploiter_scores.push_back(scores.first);
-            victim_scores.push_back(scores.second);
+        std::vector<double> exploiter_scores_this_match;
+        std::vector<double> victim_scores_this_match;
+
+        // repeats competition
+        for (int r = 0; r < config_.repeats; ++r) {
+            // reset
+            exploiter->reset();
+            victim->reset();
+
+            // 运行单场游戏
+            ScorePair scores = simulator_.runGame(exploiter, victim, config_.rounds);
+
+            // 记录分数
+            allScores[exploiter_name].push_back(scores.first);
+            allScores[victim_name].push_back(scores.second);
+
+            exploiter_scores_this_match.push_back(scores.first);
+            victim_scores_this_match.push_back(scores.second);
+
         }
-        ScoreStats exploiter_stats = simulator_.calculateStats(exploiter_scores);
-        ScoreStats victim_stats = simulator_.calculateStats(victim_scores);
-        match_results[victim_name] = { exploiter_stats, victim_stats };
+        double exploiter_avg = std::accumulate(exploiter_scores_this_match.begin(),exploiter_scores_this_match.end(), 0.0) / config_.repeats;
+        double victim_avg = std::accumulate(victim_scores_this_match.begin(),victim_scores_this_match.end(), 0.0) / config_.repeats;
+        matchAverages[victim_name] = { exploiter_avg, victim_avg };
     }
+	//print averge table
+    printExploiterMatchTable(exploiter_name, matchAverages);
 
-    printExploiterResults(exploiter_name, match_results);
 
+
+    results_.clear();
+    for (const auto& [name, scores] : allScores) {
+        results_[name] = simulator_.calculateStats(scores);
+    }
+    std::cout << "\n--- All exploiter matches completed ---\n";
 }
+
+
 
 Config SimulatorRunner::parseArguments(int argc, char** argv) {
     CLI::App app{ "Iterated Prisoner's Dilemma Simulator" };
@@ -353,3 +388,96 @@ void SimulatorRunner::printAnalysisQ1() const {
         << "opponents without risk of accidental punishment.\n";
 }
 
+void SimulatorRunner::printExploiterMatchTable(
+    const std::string& exploiter_name,
+    const std::map<std::string, std::pair<double, double>>& matchAverages) const {
+
+    std::cout << "\n=================================================\n";
+    std::cout << "--- Exploiter vs Victims: Average Scores ---\n";
+    std::cout << "=================================================\n\n";
+
+    tabulate::Table table;
+
+    // 表头
+    table.add_row({
+        "Victim Strategy",
+        exploiter_name + " Score",
+        "Victim Score",
+        "Score Difference"
+        });
+
+    // 为表头设置样式
+    table[0].format()
+        .font_style({ tabulate::FontStyle::bold })
+        .font_align(tabulate::FontAlign::center)
+        .font_color(tabulate::Color::yellow);
+
+    // 添加每场对战的数据
+    double total_exploiter_score = 0.0;
+    double total_victim_score = 0.0;
+
+    for (const auto& [victim_name, scores] : matchAverages) {
+        double exploiter_score = scores.first;
+        double victim_score = scores.second;
+        double difference = exploiter_score - victim_score;
+
+        total_exploiter_score += exploiter_score;
+        total_victim_score += victim_score;
+
+        table.add_row({
+            victim_name,
+            format_double(exploiter_score),
+            format_double(victim_score),
+            format_double(difference)
+            });
+
+        // 根据得分差异设置颜色
+        size_t row_idx = table.size() - 1;
+        if (difference > 50) {
+            table[row_idx][3].format().font_color(tabulate::Color::green);
+        }
+        else if (difference > 0) {
+            table[row_idx][3].format().font_color(tabulate::Color::yellow);
+        }
+        else {
+            table[row_idx][3].format().font_color(tabulate::Color::red);
+        }
+    }
+
+    // 添加总计行
+    if (matchAverages.size() > 1) {
+        double avg_exploiter = total_exploiter_score / matchAverages.size();
+        double avg_victim = total_victim_score / matchAverages.size();
+        double avg_difference = avg_exploiter - avg_victim;
+
+        table.add_row({
+            "Average",
+            format_double(avg_exploiter),
+            format_double(avg_victim),
+            format_double(avg_difference)
+            });
+
+        // 总计行加粗
+        table[table.size() - 1].format()
+            .font_style({ tabulate::FontStyle::bold })
+            .font_color(tabulate::Color::cyan);
+    }
+
+    // 设置表格样式
+    table.format()
+        .font_align(tabulate::FontAlign::center)
+        .border_color(tabulate::Color::cyan)
+        .border_top("═")
+        .border_bottom("═")
+        .border_left("║")
+        .border_right("║");
+
+    std::cout << table << "\n\n";
+
+    // 打印解释
+    std::cout << "Notes:\n";
+    std::cout << "  - Each row shows the average score across " << config_.repeats << " matches.\n";
+    std::cout << "  - Score Difference = " << exploiter_name << " Score - Victim Score\n";
+    std::cout << "  - Positive difference (green/yellow) means " << exploiter_name << " is winning.\n";
+    std::cout << "  - Negative difference (red) means the victim is resisting exploitation.\n\n";
+}

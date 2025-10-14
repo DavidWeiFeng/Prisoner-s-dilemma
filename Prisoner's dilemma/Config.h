@@ -19,8 +19,8 @@ struct Config {
     int seed = 42;
     std::vector<double> payoffs = { 5.0, 3.0, 1.0, 0.0 }; // T, R, P, S
 
-    //std::vector<std::string> strategy_names = { "AllDefect","AllCooperate","TitForTat","ContriteTitForTat","PAVLOV"};
-    std::vector<std::string> strategy_names = { "AllCooperate", "AllDefect","TitForTat","GrimTrigger","PAVLOV"};
+    std::vector<std::string> strategy_names = { "AllDefect","AllCooperate","TitForTat","ContriteTitForTat","PAVLOV"};
+    //std::vector<std::string> strategy_names = { "AllCooperate", "AllDefect","TitForTat","GrimTrigger","PAVLOV"};
     //std::vector<std::string> strategy_names = { "AllCooperate", "AllDefect","TitForTat","GrimTrigger","PAVLOV","CTFT","PROBER" };
     // 输入/输出参数
 
@@ -33,7 +33,7 @@ struct Config {
     int population = 200;
     int generations = 200;
     double mutation = 0.02;
-	bool  exploiters = false;      // 是否包含剥削者策略
+	bool  exploiters = true;      // 是否包含剥削者策略
 
 };
 

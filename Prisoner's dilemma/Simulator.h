@@ -126,8 +126,20 @@ public:
         for (size_t i = 0; i < strategies.size(); ++i) {
             for (size_t j = i; j < strategies.size(); ++j) {
                 const auto& p1 = strategies[i];
-                const auto& p2 = strategies[j];
-      
+                const StrategyPtr* p2_ptr;
+				// whne i==j, play with a clone of itself,to avoid state interference
+                std::unique_ptr<Strategy> p2_clone;
+
+                if (i == j)
+                {
+                    p2_clone = p1->clone();
+                    p2_ptr = &p2_clone;
+                }
+                else
+                {
+					p2_ptr = &strategies[j];
+                }
+                const auto& p2 = *p2_ptr;
                 std::vector<double> p1_scores;
                 std::vector<double> p2_scores;
 
@@ -192,7 +204,7 @@ public:
         std::cout << "=================================================\n\n";
 
         for (double epsilon : noise_levels) {
-            std::cout << "\n--- Testing noise level ε = " << std::fixed << std::setprecision(2)
+            std::cout << "\n--- Testing noise level  = " << std::fixed << std::setprecision(2)
                 << epsilon << " ---\n";
 			Strategy::setNoise(epsilon); // Set static noise level
             // Run the tournament
@@ -200,7 +212,7 @@ public:
             results[epsilon] = tournamentResults;
 
             // Print results for this noise level
-            std::cout << "\nAverage scores at noise ε = " << epsilon << " (with 95% CI):\n";
+            std::cout << "\nAverage scores at noise   = " << epsilon << " (with 95% CI):\n";
             std::vector<std::pair<std::string, ScoreStats>> sorted_results(
                 tournamentResults.begin(), tournamentResults.end());
             std::sort(sorted_results.begin(), sorted_results.end(),
@@ -231,7 +243,7 @@ public:
         }
 
         // 打印表头
-        std::cout << std::setw(10) << "ε (Noise)";
+        std::cout << std::setw(10) << "  (Noise)";
         for (const auto& name : strategies) {
             std::cout << std::setw(25) << name;
         }
@@ -261,10 +273,10 @@ public:
         std::cout << "=================================================\n\n";
 
         // Get the results for noise-free and highest-noise conditions
-        auto baseline = results.begin()->second;  // ε = 0
-        auto highest = results.rbegin()->second;  // highest ε
+        auto baseline = results.begin()->second;  //   = 0
+        auto highest = results.rbegin()->second;  // highest  
 
-        std::cout << "Performance Degradation Analysis (from ε=0 to ε=" << std::fixed << std::setprecision(2)
+        std::cout << "Performance Degradation Analysis (from  =0 to  =" << std::fixed << std::setprecision(2)
             << results.rbegin()->first << "):\n\n";
 
         std::vector<std::pair<std::string, double>> performance_drops;
@@ -319,7 +331,7 @@ private:
     void printMatchTable(const std::vector<StrategyPtr>& strategies,
         const std::vector<std::vector<std::pair<double, double>>>& matchResults) const {
 
-        std::cout << "\n--- Match Result Matrix (Noise ε = "
+        std::cout << "\n--- Match Result Matrix (Noise   = "
             << std::fixed << std::setprecision(2) << noise_level << ") ---\n";
         std::cout << "Format: P1 score : P2 score\n\n";
 

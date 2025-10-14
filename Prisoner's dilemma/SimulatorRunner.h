@@ -50,6 +50,10 @@ private:
     // 打印策略分析
     void printAnalysisQ1() const;
 
+    void printExploiterMatchTable(
+        const std::string& exploiter_name,
+        const std::map<std::string, std::pair<double, double>>& matchAverages) const;
+
     void printExploiterResults(
         const std::string& exploiter_name,
 		const std::map<std::string, std::pair<ScoreStats, ScoreStats>>& results) const;
