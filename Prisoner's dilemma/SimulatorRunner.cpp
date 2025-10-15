@@ -31,6 +31,10 @@ void SimulatorRunner::run() {
         runExploiter();
         printResults();
     }
+    else if (config_.evolve) {
+        // 运行进化模拟
+        runEvolution();
+    }
     else {
         runSimulation();
         printResults();
@@ -100,9 +104,7 @@ void SimulatorRunner::printConfiguration() const {
 
     // Evolution parameters
     if (config_.evolve) {
-        table.add_row({ "Population size", std::to_string(config_.population) });
         table.add_row({ "Generations", std::to_string(config_.generations) });
-        table.add_row({ "Mutation rate", std::to_string(config_.mutation) });
     }
 
     // 格式化表格
@@ -232,6 +234,147 @@ void SimulatorRunner::runExploiter() {
     std::cout << "\n--- All exploiter matches completed ---\n";
 }
 
+void SimulatorRunner::runEvolution() {
+    std::cout << "\n=================================================\n";
+    std::cout << "    Evolutionary Tournament\n";
+    std::cout << "=================================================\n\n";
+
+    auto history_noisefree = runSingleEvolution(0.0, "Noise-Free, epsilon=0.0");
+    auto history_noisy = runSingleEvolution(config_.epsilon, "Noisy, epsilon=" + std::to_string(config_.epsilon));
+}
+
+std::vector<std::map<std::string, double>>
+SimulatorRunner::runSingleEvolution(double noise, const std::string& label) {
+    std::cout << "\n--- Running Evolution (" << label << ") ---\n";
+	Strategy::setNoise(noise); // 设置噪声水平
+
+	std::map<std::string, double> populations;
+	double initial_fraction = 1.0 / strategies_.size();
+    for (const auto& s : strategies_)
+    {
+        populations[s->getName()] = initial_fraction;
+    }
+	std::vector<std::map<std::string, double>> history;
+    for (int gen = 0; gen < config_.generations; gen++)
+    {
+		history.push_back(populations);
+        if (gen % 5 == 0)
+        {
+            printGeneration(gen, populations);
+        }
+        // 最后一代不需要更新
+        if (gen == config_.generations) break;
+
+        // 计算适应度并更新种群
+        auto fitness = calculateFitness(populations, config_.rounds, config_.repeats);
+        updatePopulations(populations, fitness);
+    }
+	return history;
+}
+std::map<std::string, double> SimulatorRunner::calculateFitness(const std::map<std::string, double>& populations,int rounds, int repeats) {
+
+    std::map<std::string, double> fitness;
+
+    // 每个策略与每个其他策略对战
+    for (const auto& strat_i : strategies_) {
+        std::string name_i = strat_i->getName();
+        double pop_i = populations.at(name_i);
+
+        if (pop_i < 1e-6) {
+            fitness[name_i] = 0.0;  // 已灭绝的策略适应度为0
+            continue;
+        }
+
+        double total_fitness = 0.0;
+
+        for (const auto& strat_j : strategies_) {
+            std::string name_j = strat_j->getName();
+            double pop_j = populations.at(name_j);
+
+            if (pop_j < 1e-6) continue;  // 跳过灭绝的对手
+
+            // 计算对战这个策略的平均得分
+            double avg_score = playMultipleGames(strat_i, strat_j, rounds, repeats);
+
+            // 加权贡献到适应度
+            total_fitness += avg_score * pop_j;
+        }
+
+        fitness[name_i] = total_fitness;
+    }
+
+    return fitness;
+}
+
+double SimulatorRunner::playMultipleGames(
+    const std::unique_ptr<Strategy>& strat_i,
+    const std::unique_ptr<Strategy>& strat_j,
+    int rounds, int repeats) {
+
+    double total_score = 0.0;
+    bool is_self_play = (strat_i->getName() == strat_j->getName());
+
+    for (int r = 0; r < repeats; ++r) {
+        strat_i->reset();
+        strat_j->reset();
+
+        ScorePair scores;
+        if (is_self_play) {
+            auto clone = strat_i->clone();
+            scores = simulator_.runGame(strat_i, clone, rounds);
+        }
+        else {
+            scores = simulator_.runGame(strat_i, strat_j, rounds);
+        }
+        total_score += scores.first;
+    }
+
+    return total_score / repeats;
+}
+void SimulatorRunner::updatePopulations(
+    std::map<std::string, double>& populations,
+    const std::map<std::string, double>& fitness) {
+
+    // 步骤1: 计算平均适应度
+    double avg_fitness = 0.0;
+    for (const auto& [name, pop] : populations) {
+        avg_fitness += fitness.at(name) * pop;
+    }
+
+    // 避免除零错误
+    if (avg_fitness < 1e-9) {
+        std::cerr << "Warning: Average fitness is too low, skipping update.\n";
+        return;
+    }
+
+    // 步骤2: 应用复制器动力学公式更新每个策略的比例
+    // new_pop[i] = pop[i] * (fitness[i] / avg_fitness)
+    std::map<std::string, double> new_populations;
+    for (const auto& [name, pop] : populations) {
+        new_populations[name] = pop * (fitness.at(name) / avg_fitness);
+    }
+
+    // 步骤3: 更新原始种群
+    populations = new_populations;
+
+    // 可选：验证总和是否为1（用于调试）
+    double sum = 0.0;
+    for (const auto& [name, pop] : populations) {
+        sum += pop;
+    }
+    if (std::abs(sum - 1.0) > 1e-6) {
+        std::cerr << "Warning: Population sum = " << sum << " (should be 1.0)\n";
+    }
+}
+
+
+void SimulatorRunner::printGeneration(int gen, const std::map<std::string, double>& populations) {
+    std::cout << "Generation " << gen << ": ";
+    for (const auto& [name, pop] : populations) {
+        std::cout << name << "=" << std::fixed << std::setprecision(3) << pop << " ";
+    }
+    std::cout << "\n";
+}
 
 
 Config SimulatorRunner::parseArguments(int argc, char** argv) {
@@ -248,9 +391,7 @@ Config SimulatorRunner::parseArguments(int argc, char** argv) {
     app.add_option("--save", config.save_file, "File path to save the current configuration.");
     app.add_option("--load", config.load_file, "File path to load a saved configuration.");
     app.add_flag("--evolve", config.evolve, "Enable evolutionary simulation mode.");
-    app.add_option("--population", config.population, "Population size for the evolutionary simulation.");
     app.add_option("--generations", config.generations, "Number of generations for the evolutionary simulation.");
-    app.add_option("--mutation", config.mutation, "Mutation rate for the evolutionary simulation.");
     try {
         app.parse(argc, argv);
     }

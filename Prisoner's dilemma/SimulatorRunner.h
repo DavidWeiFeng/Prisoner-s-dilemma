@@ -43,6 +43,20 @@ private:
 
 	void runExploiter();
 
+    // 新增：运行进化模拟
+    void runEvolution();
+    std::vector<std::map<std::string, double>>  runSingleEvolution(double noise, const std::string& label);
+    std::map<std::string, double>calculateFitness(const std::map<std::string, double>& populations, int rounds, int repeats);
+    void printGeneration(int gen, const std::map<std::string, double>& populations);
+
+    double playMultipleGames(
+        const std::unique_ptr<Strategy>& strat_i,
+        const std::unique_ptr<Strategy>& strat_j,
+        int rounds, int repeats);
+
+    void updatePopulations(
+        std::map<std::string, double>& populations,
+		const std::map<std::string, double>& fitness);
 
     // 以用户指定的格式打印最终结果。
     void printResults() const;

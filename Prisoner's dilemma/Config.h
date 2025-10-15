@@ -15,7 +15,7 @@ struct Config {
     // 锦标赛参数
     int rounds = 10;
     int repeats = 2;
-    double epsilon = 0.0;
+    double epsilon = 0.05;
     int seed = 42;
     std::vector<double> payoffs = { 5.0, 3.0, 1.0, 0.0 }; // T, R, P, S
 
@@ -32,11 +32,9 @@ struct Config {
     std::string load_file;
 
     // 进化参数
-    bool evolve = false;
-    int population = 200;
-    int generations = 200;
-    double mutation = 0.02;
-	bool  exploiters = true;      // 是否包含剥削者策略
+    bool evolve = true;
+    int generations = 50;
+	bool  exploiters = false;      // 是否包含剥削者策略
 
 };
 
