@@ -21,10 +21,10 @@ void SimulatorRunner::run() {
     if (config_.enable_scb) {
         printer_.printComplexityTable(strategies_);
     }
-
-    if (config_.exploiters) {
-        runExploiter();
-        printer_.printTournamentResults(results_);
+    
+    // 噪声扫描模式
+    if (config_.noise_sweep) {
+        runNoiseSweep();
     }
     else if (config_.evolve) {
         runEvolution();
@@ -43,8 +43,32 @@ std::unique_ptr<Strategy> SimulatorRunner::createStrategy(const std::string& nam
     if (name == "GrimTrigger") return std::make_unique<GrimTrigger>();
     if (name == "PAVLOV") return std::make_unique<PAVLOV>();
     if (name == "ContriteTitForTat") return std::make_unique<ContriteTitForTat>();
-    if (name == "RandomStrategy") return std::make_unique<RandomStrategy>();
     if (name == "PROBER") return std::make_unique<PROBER>();
+    
+    // 解析 RandomStrategy 参数，格式: RandomStrategy<prob>
+    // 例如: RandomStrategy0.3 表示 prob=0.3
+    if (name.rfind("RandomStrategy", 0) == 0) {
+        if (name == "RandomStrategy") {
+            // 没有指定参数，使用默认值
+            return std::make_unique<RandomStrategy>();
+        }
+        // 提取概率参数
+        std::string prob_str = name.substr(14); // "RandomStrategy" 长度为 14
+        try {
+            double prob = std::stod(prob_str);
+            if (prob < 0.0 || prob > 1.0) {
+                throw std::runtime_error("RandomStrategy probability must be between 0.0 and 1.0, got: " + prob_str);
+            }
+            return std::make_unique<RandomStrategy>(prob);
+        }
+        catch (const std::invalid_argument&) {
+            throw std::runtime_error("Invalid probability format for RandomStrategy: " + prob_str);
+        }
+        catch (const std::out_of_range&) {
+            throw std::runtime_error("Probability value out of range for RandomStrategy: " + prob_str);
+        }
+    }
+    
     return nullptr;
 }
 
@@ -272,6 +296,10 @@ Config SimulatorRunner::parseArguments(int argc, char** argv) {
     app.add_flag("--evolve", config.evolve, "Enable evolutionary simulation mode.");
     app.add_option("--generations", config.generations, "Number of generations for the evolutionary simulation.");
     
+    // 噪声扫描参数
+    app.add_flag("--noise-sweep", config.noise_sweep, "Enable noise sweep analysis mode.");
+    app.add_option("--epsilon-values", config.epsilon_values, "List of epsilon values for noise sweep.");
+    
     // SCB: 添加命令行参数
     app.add_flag("--enable-scb", config.enable_scb, "Enable Strategic Complexity Budget.");
     app.add_option("--scb-cost", config.scb_cost_factor, "SCB cost factor per complexity unit per round.");
@@ -284,6 +312,63 @@ Config SimulatorRunner::parseArguments(int argc, char** argv) {
     }
 
     return config;
+}
+
+// 噪声扫描：在不同噪声水平下运行锦标赛
+void SimulatorRunner::runNoiseSweep() {
+    std::cout << "\n=================================================\n";
+    std::cout << "    Noise Sweep Analysis\n";
+    std::cout << "=================================================\n\n";
+    
+    std::cout << "Testing noise levels: ";
+    for (size_t i = 0; i < config_.epsilon_values.size(); ++i) {
+        std::cout << config_.epsilon_values[i];
+        if (i < config_.epsilon_values.size() - 1) std::cout << ", ";
+    }
+    std::cout << "\n\n";
+    
+    // 执行噪声扫描
+    auto noise_results = executeNoiseSweep(config_.epsilon_values);
+    
+    // 打印和导出结果
+    printer_.printNoiseAnalysisTable(noise_results);
+    printer_.exportNoiseAnalysisToCSV(noise_results, "noise_analysis.csv");
+    
+    std::cout << "\n--- Noise sweep completed ---\n";
+}
+
+std::map<double, std::map<std::string, ScoreStats>> 
+SimulatorRunner::executeNoiseSweep(const std::vector<double>& epsilon_values) {
+    std::map<double, std::map<std::string, ScoreStats>> all_results;
+    
+    for (double epsilon : epsilon_values) {
+        std::cout << "\n--- Running tournament with ε = " << epsilon << " ---\n";
+        
+        // 设置当前噪声水平
+        Strategy::setNoise(epsilon);
+        
+        // 重置所有策略状态
+        for (auto& strategy : strategies_) {
+            strategy->reset();
+        }
+        
+        // 运行锦标赛
+        auto results = simulator_.runTournament(strategies_, config_.rounds, config_.repeats);
+        
+        // 存储结果
+        all_results[epsilon] = results;
+        
+        // 简要输出当前结果
+        std::cout << "Results for ε = " << epsilon << ":\n";
+        for (const auto& [name, stats] : results) {
+            std::cout << "  " << name << ": " << stats.mean << "\n";
+        }
+    }
+    
+    // 恢复原始噪声设置
+    Strategy::setNoise(config_.epsilon);
+    
+    return all_results;
 }
 
 // SCB: 运行带有对比的锦标赛（可以手动调用以进行实验）

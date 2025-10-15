@@ -3,6 +3,7 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
+#include <fstream>
 #include <algorithm>
 
 ResultsPrinter::ResultsPrinter(const Config& config) : config_(config) {
@@ -159,11 +160,135 @@ void ResultsPrinter::printTournamentResults(const std::map<std::string, ScoreSta
     std::cout << table << "\n";
 }
 
+void ResultsPrinter::exportTournamentResultsToCSV(const std::map<std::string, ScoreStats>& results, const std::string& filename) const {
+    // 按平均分排序
+    std::vector<std::pair<std::string, ScoreStats>> sorted_results(results.begin(), results.end());
+    std::sort(sorted_results.begin(), sorted_results.end(),
+        [](const auto& a, const auto& b) { return a.second.mean > b.second.mean; });
+
+    // 打开文件
+    std::ofstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Error: Cannot open file " << filename << " for writing.\n";
+        return;
+    }
+
+    // 写入表头
+    file << "Rank,Strategy,Mean,95% CI Lower,95% CI Upper,Std Dev\n";
+
+    // 写入数据
+    int rank = 1;
+    for (const auto& [name, stats] : sorted_results) {
+        file << rank++ << ","
+             << name << ","
+             << formatDouble(stats.mean) << ","
+             << formatDouble(stats.ci_lower) << ","
+             << formatDouble(stats.ci_upper) << ","
+             << formatDouble(stats.stdev) << "\n";
+    }
+
+    file.close();
+    std::cout << "Tournament results exported to: " << filename << "\n";
+}
+
 void ResultsPrinter::printAnalysis(const std::string& analysis_text) const {
     std::cout << "\n=================================================\n";
     std::cout << "--- Analysis ---\n";
     std::cout << "=================================================\n\n";
     std::cout << analysis_text << "\n\n";
+}
+
+// ==================== 噪声分析打印 ====================
+
+void ResultsPrinter::printNoiseAnalysisTable(
+    const std::map<double, std::map<std::string, ScoreStats>>& noise_results) const {
+    
+    std::cout << "\n=================================================\n";
+    std::cout << "--- Noise Sweep Analysis Results ---\n";
+    std::cout << "=================================================\n\n";
+    
+    // 收集所有策略名称
+    std::vector<std::string> strategy_names;
+    if (!noise_results.empty()) {
+        for (const auto& [strategy, _] : noise_results.begin()->second) {
+            strategy_names.push_back(strategy);
+        }
+    }
+    
+    // 创建表格
+    tabulate::Table table;
+    
+    // 表头
+    std::vector<std::string> header = {"Epsilon (ε)"};
+    for (const auto& name : strategy_names) {
+        header.push_back(name);
+    }
+    table.add_row({header.begin(), header.end()});
+    
+    // 表头样式
+    table[0].format()
+        .font_style({tabulate::FontStyle::bold})
+        .font_align(tabulate::FontAlign::center)
+        .font_color(tabulate::Color::yellow);
+    
+    // 数据行
+    for (const auto& [epsilon, results] : noise_results) {
+        std::vector<std::string> row;
+        row.push_back(formatDouble(epsilon, 2));
+        
+        for (const auto& name : strategy_names) {
+            if (results.find(name) != results.end()) {
+                row.push_back(formatDouble(results.at(name).mean));
+            } else {
+                row.push_back("N/A");
+            }
+        }
+        
+        table.add_row({row.begin(), row.end()});
+    }
+    
+    // 表格样式
+    table.format()
+        .font_align(tabulate::FontAlign::center)
+        .border_color(tabulate::Color::cyan);
+    
+    std::cout << table << "\n\n";
+    
+    // 打印观察结果
+    std::cout << "Observations:\n";
+    std::cout << "  - Compare how each strategy's average payoff changes with noise level\n";
+    std::cout << "  - Strategies with smaller drops are more noise-robust\n";
+    std::cout << "  - Look for strategies that collapse (e.g., GRIM typically drops sharply)\n";
+    std::cout << "  - CTFT and PAVLOV usually show better resilience to noise\n\n";
+}
+
+void ResultsPrinter::exportNoiseAnalysisToCSV(
+    const std::map<double, std::map<std::string, ScoreStats>>& noise_results,
+    const std::string& filename) const {
+    
+    std::ofstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Error: Cannot open file " << filename << " for writing.\n";
+        return;
+    }
+    
+    // CSV 表头
+    file << "Epsilon,Strategy,Mean,StdDev,CI_Lower,CI_Upper\n";
+    
+    // 写入数据
+    for (const auto& [epsilon, results] : noise_results) {
+        for (const auto& [strategy, stats] : results) {
+            file << formatDouble(epsilon, 2) << ","
+                 << strategy << ","
+                 << formatDouble(stats.mean) << ","
+                 << formatDouble(stats.stdev) << ","
+                 << formatDouble(stats.ci_lower) << ","
+                 << formatDouble(stats.ci_upper) << "\n";
+        }
+    }
+    
+    file.close();
+    std::cout << "Noise analysis exported to: " << filename << "\n";
 }
 
 // ==================== 剥削者模式打印 ====================

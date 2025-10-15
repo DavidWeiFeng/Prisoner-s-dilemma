@@ -33,8 +33,22 @@ public:
     /// 打印锦标赛结果表格
     void printTournamentResults(const std::map<std::string, ScoreStats>& results) const;
     
+    /// 导出锦标赛结果到 CSV 文件
+    void exportTournamentResultsToCSV(const std::map<std::string, ScoreStats>& results, const std::string& filename) const;
+    
     /// 打印策略分析
     void printAnalysis(const std::string& analysis_text) const;
+    
+    // ==================== 噪声分析打印 ====================
+    
+    /// 打印噪声分析表格
+    void printNoiseAnalysisTable(
+        const std::map<double, std::map<std::string, ScoreStats>>& noise_results) const;
+    
+    /// 导出噪声分析到 CSV 文件
+    void exportNoiseAnalysisToCSV(
+        const std::map<double, std::map<std::string, ScoreStats>>& noise_results,
+        const std::string& filename) const;
 
     // ==================== 剥削者模式打印 ====================
     

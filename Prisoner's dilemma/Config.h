@@ -20,22 +20,23 @@ struct Config {
     std::vector<double> payoffs = { 5.0, 3.0, 1.0, 0.0 }; // T, R, P, S
 
     
-    //std::vector<std::string> strategy_names = { "AllCooperate", "AllDefect","TitForTat","GrimTrigger","PAVLOV"};
-    std::vector<std::string> strategy_names = { "AllCooperate", "AllDefect","TitForTat","GrimTrigger","PAVLOV","ContriteTitForTat","PROBER" };
-
+    std::vector<std::string> strategy_names = { "AllCooperate", "AllDefect","TitForTat","GrimTrigger","PAVLOV"};
+    //std::vector<std::string> strategy_names = { "AllCooperate", "AllDefect","TitForTat","GrimTrigger","PAVLOV","ContriteTitForTat","PROBER" };
      //std::vector<std::string> strategy_names = { "AllDefect","AllCooperate","TitForTat","ContriteTitForTat","PAVLOV"};
      //std::vector<std::string> strategy_names = { "PROBER","AllCooperate","TitForTat" };
 
 
-    std::string format = "text";
+    std::string format = "csv";
     std::string save_file;
     std::string load_file;
 
-    // 进化参数
     bool evolve = true;
     int generations = 50;
-	bool  exploiters = false;      // 是否包含剥削者策略
-
+    
+    // 噪声扫描参数
+    bool noise_sweep = true;           // 是否启用噪声扫描模式
+    std::vector<double> epsilon_values = {0.0, 0.05, 0.1, 0.15, 0.2}; // 噪声水平扫描值
+    
     // SCB (Strategic Complexity Budget) 参数
     bool enable_scb = false;           // 是否启用战略复杂度预算
     double scb_cost_factor = 0.1;      // 每单位复杂度每轮的成本系数

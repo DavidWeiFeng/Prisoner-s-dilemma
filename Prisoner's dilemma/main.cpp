@@ -16,12 +16,10 @@ int main(int argc, char** argv) {
 
     }
     catch (const std::exception& e) {
-        // 捕获任何标准异常 (例如，来自命令行解析或文件错误)
-        // 并友好地报告它们。
         std::cerr << "错误: " << e.what() << std::endl;
-        return 1; // 返回 1 表示执行失败
+        return 1; 
     }
 
-    return 0; // 返回 0 表示执行成功
+    return 0; 
 }
 

@@ -41,6 +41,10 @@ private:
     void runEvolution();
     std::vector<std::map<std::string, double>> runSingleEvolution(double noise, const std::string& label);
     std::map<std::string, double> calculateFitness(const std::map<std::string, double>& populations, int rounds, int repeats);
+    
+    // 新增：运行噪声扫描
+    void runNoiseSweep();
+    std::map<double, std::map<std::string, ScoreStats>> executeNoiseSweep(const std::vector<double>& epsilon_values);
 
     double playMultipleGames(
         const std::unique_ptr<Strategy>& strat_i,
