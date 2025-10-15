@@ -146,8 +146,11 @@
     <None Include="plot_noise_analysis.py" />
     <None Include="Q2_IMPLEMENTATION_REPORT.md" />
     <None Include="Q2_QUICK_REFERENCE.md" />
+    <None Include="Q3_EXPLOITER_GUIDE.md" />
+    <None Include="Q3_FIX_SUMMARY.md" />
+    <None Include="Q3_IMPLEMENTATION_REPORT.md" />
+    <None Include="Q3_QUICK_REFERENCE.md" />
     <None Include="REFACTORING_SUMMARY.md" />
-    <None Include="test_noise_sweep.ps1" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

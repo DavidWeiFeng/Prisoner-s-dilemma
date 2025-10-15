@@ -160,45 +160,88 @@ void ResultsPrinter::printTournamentResults(const std::map<std::string, ScoreSta
     std::cout << table << "\n";
 }
 
-void ResultsPrinter::exportTournamentResultsToCSV(const std::map<std::string, ScoreStats>& results, const std::string& filename) const {
-    // 按平均分排序
-    std::vector<std::pair<std::string, ScoreStats>> sorted_results(results.begin(), results.end());
-    std::sort(sorted_results.begin(), sorted_results.end(),
-        [](const auto& a, const auto& b) { return a.second.mean > b.second.mean; });
+void ResultsPrinter::printMatchTable(
+    const std::vector<std::unique_ptr<Strategy>>& strategies,
+    const std::vector<std::vector<std::pair<double, double>>>& matchResults) const {
 
-    // 打开文件
-    std::ofstream file(filename);
-    if (!file.is_open()) {
-        std::cerr << "Error: Cannot open file " << filename << " for writing.\n";
-        return;
+    std::cout << "\n--- Match Result Matrix" << std::endl;
+    std::cout << "Format: P1 score : P2 score\n\n";
+
+    tabulate::Table table;
+
+    // 表头
+    std::vector<std::string> header = { "Strategy \\ Opponent" };
+    for (const auto& s : strategies) {
+        header.push_back(s->getName());
+    }
+    table.add_row({ header.begin(), header.end() }); 
+
+    // 填充每一行
+    for (size_t i = 0; i < strategies.size(); ++i) {
+        std::vector<std::string> row;
+        row.push_back(strategies[i]->getName());  // 行标题
+
+        for (size_t j = 0; j < strategies.size(); ++j) {
+            std::ostringstream oss;
+            oss << std::fixed << std::setprecision(2);
+            if (i == j) {
+                // 对角线：自己 vs 自己
+                oss << matchResults[i][j].first;
+            }
+            else {
+                // P1 vs P2
+                oss << matchResults[i][j].first << " : " << matchResults[i][j].second;
+            }
+            row.push_back(oss.str());
+        }
+        table.add_row({row.begin(),row.end()});
     }
 
-    // 写入表头
-    file << "Rank,Strategy,Mean,95% CI Lower,95% CI Upper,Std Dev\n";
+    // 格式化表格
+    table.format()
+        .border_color(tabulate::Color::green)
+        .font_align(tabulate::FontAlign::center);
 
-    // 写入数据
-    int rank = 1;
-    for (const auto& [name, stats] : sorted_results) {
-        file << rank++ << ","
-             << name << ","
-             << formatDouble(stats.mean) << ","
-             << formatDouble(stats.ci_lower) << ","
-             << formatDouble(stats.ci_upper) << ","
-             << formatDouble(stats.stdev) << "\n";
-    }
-
-    file.close();
-    std::cout << "Tournament results exported to: " << filename << "\n";
-}
-
-void ResultsPrinter::printAnalysis(const std::string& analysis_text) const {
-    std::cout << "\n=================================================\n";
-    std::cout << "--- Analysis ---\n";
-    std::cout << "=================================================\n\n";
-    std::cout << analysis_text << "\n\n";
+    std::cout << table << std::endl;
 }
 
 // ==================== 噪声分析打印 ====================
+
+void ResultsPrinter::printNoiseSweepTable(const std::map<double, std::map<std::string, ScoreStats>>& results) const {
+    if (results.empty()) return;
+
+    std::cout << "\n=================================================\n";
+    std::cout << " Noise Sweep Summary\n";
+    std::cout << "=================================================\n\n";
+
+    // 获取所有策略名称
+    std::vector<std::string> strategies;
+    for (const auto& [name, stats] : results.begin()->second) {
+        strategies.push_back(name);
+    }
+
+    // 打印表头
+    std::cout << std::setw(10) << "  (Noise)";
+    for (const auto& name : strategies) {
+        std::cout << std::setw(25) << name;
+    }
+    std::cout << "\n";
+    std::cout << std::string(10 + strategies.size() * 25, '-') << "\n";
+
+    // 打印每个噪声水平的结果（mean ± CI）
+    for (const auto& [epsilon, scores] : results) {
+        std::cout << std::fixed << std::setprecision(2) << std::setw(10) << epsilon;
+        for (const auto& name : strategies) {
+            const auto& stats = scores.at(name);
+            std::ostringstream oss;
+            oss << std::fixed << std::setprecision(2) 
+                << stats.mean << " [" << stats.ci_lower << "," << stats.ci_upper << "]";
+            std::cout << std::setw(25) << oss.str();
+        }
+        std::cout << "\n";
+    }
+    std::cout << "\n";
+}
 
 void ResultsPrinter::printNoiseAnalysisTable(
     const std::map<double, std::map<std::string, ScoreStats>>& noise_results) const {
@@ -219,7 +262,7 @@ void ResultsPrinter::printNoiseAnalysisTable(
     tabulate::Table table;
     
     // 表头
-    std::vector<std::string> header = {"Epsilon (ε)"};
+    std::vector<std::string> header = {"Epsilon (epsilon)"};
     for (const auto& name : strategy_names) {
         header.push_back(name);
     }
@@ -387,64 +430,155 @@ void ResultsPrinter::printExploiterMatchTable(
     std::cout << "  - Negative difference (red) means the victim is resisting exploitation.\n\n";
 }
 
-void ResultsPrinter::printExploiterResults(
+void ResultsPrinter::showExploiterVsOpponent(
     const std::string& exploiter_name,
-    const std::map<std::string, std::pair<ScoreStats, ScoreStats>>& results) const {
+    const std::string& victim_name,
+    const ScoreStats& exploiter_stats,
+    const ScoreStats& victim_stats,
+    int repeats,
+    int rounds) const {
 
     std::cout << "\n=================================================\n";
-    std::cout << "--- Exploiter Test Results ---\n";
+    std::cout << "   Detailed Match: " << exploiter_name
+        << " vs " << victim_name << "\n";
     std::cout << "=================================================\n\n";
 
-    std::cout << "Exploiter: " << exploiter_name << "\n";
-    std::cout << "Based on " << config_.repeats << " repeated experiments\n";
-    std::cout << "Rounds per match: " << config_.rounds << "\n\n";
+    // 打印结果 - 使用 tabulate 库保持风格一致
+    std::cout << "Results after " << repeats << " matches of " << rounds << " rounds:\n\n";
 
-    // 创建表格
     tabulate::Table table;
+    table.add_row({ "Strategy", "Mean Score", "95% CI Lower", "95% CI Upper", "Std Dev" });
 
-    // 表头
+    table[0].format()
+        .font_style({ tabulate::FontStyle::bold })
+        .font_align(tabulate::FontAlign::center)
+        .font_color(tabulate::Color::yellow);
+
     table.add_row({
-        "Victim Strategy",
-        exploiter_name + " Mean",
-        exploiter_name + " 95% CI",
-        "Victim Mean",
-        "Victim 95% CI",
-        "Score Difference"
-    });
-
-    // 添加每场对战的结果
-    for (const auto& [victim_name, stats_pair] : results) {
-        const auto& exploiter_stats = stats_pair.first;
-        const auto& victim_stats = stats_pair.second;
-
-        double score_diff = exploiter_stats.mean - victim_stats.mean;
-
-        std::string exploiter_ci = formatDouble(exploiter_stats.ci_lower) + " - " +
-            formatDouble(exploiter_stats.ci_upper);
-        std::string victim_ci = formatDouble(victim_stats.ci_lower) + " - " +
-            formatDouble(victim_stats.ci_upper);
-
-        table.add_row({
-            victim_name,
-            formatDouble(exploiter_stats.mean),
-            exploiter_ci,
-            formatDouble(victim_stats.mean),
-            victim_ci,
-            formatDouble(score_diff)
+        exploiter_name,
+        formatDouble(exploiter_stats.mean),
+        formatDouble(exploiter_stats.ci_lower),
+        formatDouble(exploiter_stats.ci_upper),
+        formatDouble(exploiter_stats.stdev)
         });
-    }
 
-    // 格式化表格
+    table.add_row({
+        victim_name,
+        formatDouble(victim_stats.mean),
+        formatDouble(victim_stats.ci_lower),
+        formatDouble(victim_stats.ci_upper),
+        formatDouble(victim_stats.stdev)
+        });
+
     table.format()
         .font_align(tabulate::FontAlign::center)
         .border_color(tabulate::Color::cyan);
 
-    // 表头加粗
-    table[0].format()
-        .font_style({ tabulate::FontStyle::bold })
-        .font_align(tabulate::FontAlign::center);
+    std::cout << table << "\n";
+}
 
-    std::cout << table << "\n\n";
+void ResultsPrinter::analyzeMixedPopulation(
+    const std::map<std::string, ScoreStats>& results,
+    const std::string& exploiter_name) const {
+    
+    std::cout << "\n=================================================\n";
+    std::cout << "   Mixed Population Analysis: " << exploiter_name << "\n";
+    std::cout << "=================================================\n\n";
+
+    // 按得分排序
+    std::vector<std::pair<std::string, ScoreStats>> sorted_results(
+        results.begin(), results.end());
+    std::sort(sorted_results.begin(), sorted_results.end(),
+        [](const auto& a, const auto& b) { return a.second.mean > b.second.mean; });
+
+    // 找到剥削者的排名
+    int exploiter_rank = 0;
+    int total_strategies = sorted_results.size();
+    
+    for (int i = 0; i < total_strategies; ++i) {
+        if (sorted_results[i].first == exploiter_name) {
+            exploiter_rank = i + 1;
+            break;
+        }
+    }
+
+    // 打印排名表
+    std::cout << "Performance Ranking:\n\n";
+    std::cout << std::setw(5) << "Rank" 
+              << std::setw(15) << "Strategy" 
+              << std::setw(12) << "Avg Score"
+              << std::setw(25) << "95% CI"
+              << "  Notes\n";
+    std::cout << std::string(77, '-') << "\n";
+
+    int rank = 1;
+    for (const auto& [name, stats] : sorted_results) {
+        std::cout << std::setw(5) << rank 
+                  << std::setw(15) << name
+                  << std::setw(12) << std::fixed << std::setprecision(2) << stats.mean
+                  << "  [" << std::setw(6) << stats.ci_lower 
+                  << "," << std::setw(6) << stats.ci_upper << "]";
+        
+        if (name == exploiter_name) {
+            std::cout << "  ← EXPLOITER";
+        }
+        std::cout << "\n";
+        rank++;
+    }
+
+    // 分析剥削者的表现
+    std::cout << "\n--- Performance Analysis ---\n\n";
+    
+    auto exploiter_stats = results.at(exploiter_name);
+    std::cout << exploiter_name << " finished in rank " << exploiter_rank 
+              << " out of " << total_strategies << " strategies\n\n";
+
+    if (exploiter_rank == 1) {
+        std::cout << "✓ DOMINATES the population\n";
+        std::cout << "  → High proportion of vulnerable strategies\n";
+        std::cout << "  → Exploitation gains outweigh retaliation costs\n";
+        std::cout << "  → This population is NOT stable (non-ESS)\n";
+    } else if (exploiter_rank <= total_strategies / 2) {
+        std::cout << "○ MODERATE performance\n";
+        std::cout << "  → Successfully exploits some strategies\n";
+        std::cout << "  → But punished by reciprocal strategies\n";
+        std::cout << "  → Overall advantage is limited\n";
+    } else {
+        std::cout << "✗ POOR performance\n";
+        std::cout << "  → Most strategies use retaliation\n";
+        std::cout << "  → Trapped in mutual defection (P payoff)\n";
+        std::cout << "  → Cannot compete with cooperative strategies\n";
+        std::cout << "  → This is expected in diverse populations\n";
+    }
+
+    // 对比剥削者与最高分策略
+    if (exploiter_rank > 1) {
+        const auto& top_strategy = sorted_results[0];
+        double score_gap = top_strategy.second.mean - exploiter_stats.mean;
+        
+        std::cout << "\nScore gap with leader (" << top_strategy.first << "): "
+                  << std::fixed << std::setprecision(2) << score_gap << " points\n";
+        std::cout << "  → Reciprocal strategies maintain cooperation among themselves\n";
+        std::cout << "  → This generates higher average scores than indiscriminate defection\n";
+    }
+
+    // 理论解释
+    std::cout << "\n--- Theoretical Insight ---\n\n";
+    if (exploiter_name == "ALLD") {
+        std::cout << "ALLD (Always Defect) in mixed populations:\n";
+        std::cout << "  • Exploits unconditional cooperators (ALLC) → gains T payoff\n";
+        std::cout << "  • But gets trapped in mutual defection with most others → receives P payoff\n";
+        std::cout << "  • Since T > R > P > S, reciprocal strategies earning R outperform ALLD earning mostly P\n";
+        std::cout << "  • Conclusion: Pure defection is NOT an Evolutionarily Stable Strategy (ESS)\n";
+        std::cout << "                in populations with reciprocal strategies\n";
+    } else if (exploiter_name == "PROBER") {
+        std::cout << "PROBER in mixed populations:\n";
+        std::cout << "  • Intelligently identifies exploitable targets (ALLC)\n";
+        std::cout << "  • Switches to cooperation with defensive strategies (TFT, PAVLOV, CTFT)\n";
+        std::cout << "  • More adaptive than ALLD, but success depends on population composition\n";
+        std::cout << "  • Performance rank indicates the proportion of vulnerable vs. defensive strategies\n";
+    }
+    std::cout << "\n";
 }
 
 // ==================== 进化模拟打印 ====================

@@ -119,8 +119,9 @@ public:
         return stats;
     }
     // 标准锦标赛 with confidence intervals
-
-    std::map<std::string, ScoreStats> runTournament(const std::vector<StrategyPtr>& strategies,  int rounds, int repeats) const {
+    // 返回一个 pair: first 是策略统计结果，second 是对战矩阵（用于打印）
+    std::pair<std::map<std::string, ScoreStats>, std::vector<std::vector<ScorePair>>> 
+    runTournament(const std::vector<StrategyPtr>& strategies, int rounds, int repeats) const {
 		std::map<std::string, std::vector<double>> allScores; // add all scores for each strategy
         // 初始化
         for (const auto& s : strategies) {
@@ -186,16 +187,13 @@ public:
             }
         }
 
-         //打印对战结果表格
-        printMatchTable(strategies, matchResults);
-
         // 计算每个策略的总体统计信息（包括置信区间）
         std::map<std::string, ScoreStats> stats;
         for (const auto& [name, scores] : allScores) {
             stats[name] = calculateStats(scores);
         }
         
-        return stats;
+        return { stats, matchResults };
     }
 
 
@@ -217,7 +215,7 @@ public:
                 << epsilon << " ---\n";
 			Strategy::setNoise(epsilon); // Set static noise level
             // Run the tournament
-            std::map<std::string, ScoreStats> tournamentResults = runTournament(strategies, rounds, repeats);
+            auto [tournamentResults, matchResults] = runTournament(strategies, rounds, repeats);
             results[epsilon] = tournamentResults;
 
             // Print results for this noise level
@@ -235,152 +233,6 @@ public:
         }
 
         return results;
-    }
-
-    // 打印噪声扫描结果表格
-    static void printNoiseSweepTable(const std::map<double, std::map<std::string, ScoreStats>>& results) {
-        if (results.empty()) return;
-
-        std::cout << "\n=================================================\n";
-        std::cout << " Noise Sweep Summary\n";
-        std::cout << "=================================================\n\n";
-
-        // 获取所有策略名称
-        std::vector<std::string> strategies;
-        for (const auto& [name, stats] : results.begin()->second) {
-            strategies.push_back(name);
-        }
-
-        // 打印表头
-        std::cout << std::setw(10) << "  (Noise)";
-        for (const auto& name : strategies) {
-            std::cout << std::setw(25) << name;
-        }
-        std::cout << "\n";
-        std::cout << std::string(10 + strategies.size() * 25, '-') << "\n";
-
-        // 打印每个噪声水平的结果（mean ± CI）
-        for (const auto& [epsilon, scores] : results) {
-            std::cout << std::fixed << std::setprecision(2) << std::setw(10) << epsilon;
-            for (const auto& name : strategies) {
-                const auto& stats = scores.at(name);
-                std::ostringstream oss;
-                oss << std::fixed << std::setprecision(2) 
-                    << stats.mean << " [" << stats.ci_lower << "," << stats.ci_upper << "]";
-                std::cout << std::setw(25) << oss.str();
-            }
-            std::cout << "\n";
-        }
-        std::cout << "\n";
-    }
-
-    static void analyzeNoiseImpact(const std::map<double, std::map<std::string, ScoreStats>>& results) {
-        if (results.empty()) return;
-
-        std::cout << "\n=================================================\n";
-        std::cout << "   Noise Impact Analysis\n";
-        std::cout << "=================================================\n\n";
-
-        // Get the results for noise-free and highest-noise conditions
-        auto baseline = results.begin()->second;  //   = 0
-        auto highest = results.rbegin()->second;  // highest  
-
-        std::cout << "Performance Degradation Analysis (from  =0 to  =" << std::fixed << std::setprecision(2)
-            << results.rbegin()->first << "):\n\n";
-
-        std::vector<std::pair<std::string, double>> performance_drops;
-        for (const auto& [name, base_stats] : baseline) {
-            double base_score = base_stats.mean;
-            double high_score = highest.at(name).mean;
-            double drop_percent = ((base_score - high_score) / base_score) * 100.0;
-            performance_drops.push_back({ name, drop_percent });
-        }
-
-        // Sort by performance drop
-        std::sort(performance_drops.begin(), performance_drops.end(),
-            [](const auto& a, const auto& b) { return a.second > b.second; });
-
-        for (const auto& [name, drop] : performance_drops) {
-            std::cout << std::setw(15) << std::left << name << ": "
-                << std::fixed << std::setprecision(1) << drop << "% drop";
-
-            if (drop > 50) {
-                std::cout << "  [Severe Collapse]";
-            }
-            else if (drop > 30) {
-                std::cout << "  [Significant Decline]";
-            }
-            else if (drop > 10) {
-                std::cout << "  [Moderate Impact]";
-            }
-            else {
-                std::cout << "  [Robust]";
-            }
-            std::cout << "\n";
-        }
-
-        std::cout << "\nStrategy Characteristics Analysis:\n\n";
-        std::cout << "[Severely Collapsed Strategies] (> 50% drop):\n";
-        std::cout << "   - Typically unforgiving strategies (e.g., GRIM)\n";
-        std::cout << "   - Noise triggers irreversible defection loops\n";
-        std::cout << "   - Unable to recover from accidental mistakes\n\n";
-
-        std::cout << "[Moderately Affected Strategies] (10–30% drop):\n";
-        std::cout << "   - Partially forgiving strategies (e.g., TFT)\n";
-        std::cout << "   - Can recover from mistakes but require time\n";
-        std::cout << "   - May fall into short-term defection loops\n\n";
-
-        std::cout << "[Robust Strategies] (< 10% drop):\n";
-        std::cout << "   - Forgiving and error-correcting strategies (e.g., CTFT, PAVLOV)\n";
-        std::cout << "   - Can detect and correct noise-induced errors\n";
-        std::cout << "   - Quickly return to cooperative state\n\n";
-    }
-
-private:
-    void printMatchTable(const std::vector<StrategyPtr>& strategies,
-        const std::vector<std::vector<std::pair<double, double>>>& matchResults) const {
-
-        std::cout << "\n--- Match Result Matrix (Noise   = "
-            << std::fixed << std::setprecision(2) << noise_level << ") ---\n";
-        std::cout << "Format: P1 score : P2 score\n\n";
-
-        tabulate::Table table;
-
-        // 表头
-        std::vector<std::string> header = { "Strategy \\ Opponent" };
-        for (const auto& s : strategies) {
-            header.push_back(s->getName());
-        }
-        table.add_row({ header.begin(), header.end() }); 
-
-
-        // 填充每一行
-        for (size_t i = 0; i < strategies.size(); ++i) {
-            std::vector<std::string> row;
-            row.push_back(strategies[i]->getName());  // 行标题
-
-            for (size_t j = 0; j < strategies.size(); ++j) {
-				std::ostringstream oss;
-				oss << std::fixed << std::setprecision(2);
-                if (i == j) {
-                    // 对角线：自己 vs 自己
-					oss << matchResults[i][j].first;
-                }
-                else {
-                    // P1 vs P2
-                    oss << matchResults[i][j].first << " : " << matchResults[i][j].second;
-                }
-				row.push_back(oss.str());
-            }
-            table.add_row({row.begin(),row.end()});
-        }
-
-        // 格式化表格
-        table.format()
-            .border_color(tabulate::Color::green)
-            .font_align(tabulate::FontAlign::center);
-
-        std::cout << table << std::endl;
     }
 };
 

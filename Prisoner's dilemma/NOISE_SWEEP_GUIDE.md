@@ -2,7 +2,7 @@
 
 ## 📋 功能说明
 
-噪声扫描功能允许你在不同的噪声水平（ε）下系统地测试策略的鲁棒性。这对应于 **Q2: Reciprocity under noise** 的要求。
+噪声扫描功能允许你在不同的噪声水平（epsilon）下系统地测试策略的鲁棒性。这对应于 **Q2: Reciprocity under noise** 的要求。
 
 ## 🎯 使用方法
 
@@ -10,7 +10,7 @@
 
 ```bash
 # 测试 TFT, GRIM, PAVLOV, CTFT 在默认噪声水平下的表现
-# 默认: ε = 0.0, 0.05, 0.1, 0.15, 0.2
+# 默认: epsilon = 0.0, 0.05, 0.1, 0.15, 0.2
 ./program --noise-sweep --strategies TitForTat GrimTrigger PAVLOV ContriteTitForTat --rounds 100 --repeats 10
 ```
 
@@ -44,7 +44,7 @@
 --- Noise Sweep Analysis Results ---
 =================================================
 
-Epsilon (ε) | TitForTat | GrimTrigger | PAVLOV | ContriteTitForTat
+Epsilon (epsilon) | TitForTat | GrimTrigger | PAVLOV | ContriteTitForTat
 ------------|-----------|-------------|--------|-------------------
 0.00        | 285.50    | 280.30      | 275.80 | 283.20
 0.05        | 265.40    | 245.60      | 268.90 | 270.10
@@ -95,7 +95,7 @@ for strategy in df['Strategy'].unique():
              label=strategy)
 
 # 图表设置
-plt.xlabel('Noise Level (ε)', fontsize=14)
+plt.xlabel('Noise Level (epsilon)', fontsize=14)
 plt.ylabel('Average Payoff', fontsize=14)
 plt.title('Strategy Performance vs Noise Level', fontsize=16, fontweight='bold')
 plt.legend(fontsize=12, loc='best')
@@ -123,7 +123,7 @@ python plot_noise_analysis.py
 **GRIM (Grim Trigger)** 通常表现最差：
 - **原因**: 一旦检测到背叛就永远不恕
 - **在噪声下**: 误判的背叛导致永久的报复循环
-- **预期行为**: 随着 ε 增加，得分急剧下降
+- **预期行为**: 随着 epsilon 增加，得分急剧下降
 
 ### 2. 哪些策略鲁棒（resilient）？
 
@@ -142,28 +142,28 @@ python plot_noise_analysis.py
 Discussion for Q2:
 
 1. Implementation of Noise Mechanism:
-   - Each move has probability ε of flipping (C→D or D→C)
-   - Tested with ε ∈ {0.0, 0.05, 0.1, 0.15, 0.2}
+   - Each move has probability epsilon of flipping (C→D or D→C)
+   - Tested with epsilon ∈ {0.0, 0.05, 0.1, 0.15, 0.2}
 
 2. Results Summary:
    [插入表格或图表]
 
 3. Key Findings:
    a) GRIM collapsed under noise:
-      - At ε=0.0: score = 280.30
-      - At ε=0.2: score = 110.20
+      - At epsilon=0.0: score = 280.30
+      - At epsilon=0.2: score = 110.20
       - Drop: 61% (most severe)
       - Reason: Unforgiving nature makes it vulnerable to false triggers
 
    b) CTFT remained resilient:
-      - At ε=0.0: score = 283.20
-      - At ε=0.2: score = 225.40
+      - At epsilon=0.0: score = 283.20
+      - At epsilon=0.2: score = 225.40
       - Drop: 20% (least severe)
       - Reason: Contrite mechanism repairs noise-induced defections
 
    c) PAVLOV showed good robustness:
-      - At ε=0.0: score = 275.80
-      - At ε=0.2: score = 210.30
+      - At epsilon=0.0: score = 275.80
+      - At epsilon=0.2: score = 210.30
       - Drop: 24%
       - Reason: Win-Stay-Lose-Shift quickly restores cooperation
 
@@ -210,7 +210,7 @@ Discussion for Q2:
 
 **Table 1: Average Payoff vs Noise Level**
 
-| ε    | TFT    | GRIM   | PAVLOV | CTFT   | Best Strategy |
+| epsilon    | TFT    | GRIM   | PAVLOV | CTFT   | Best Strategy |
 |------|--------|--------|--------|--------|---------------|
 | 0.00 | 285.50 | 280.30 | 275.80 | 283.20 | TFT          |
 | 0.05 | 265.40 | 245.60 | 268.90 | 270.10 | CTFT         |
@@ -220,7 +220,7 @@ Discussion for Q2:
 
 **Table 2: Performance Drop Analysis**
 
-| Strategy | Score at ε=0.0 | Score at ε=0.2 | Absolute Drop | Percentage Drop |
+| Strategy | Score at epsilon=0.0 | Score at epsilon=0.2 | Absolute Drop | Percentage Drop |
 |----------|----------------|----------------|---------------|-----------------|
 | GRIM     | 280.30         | 110.20         | 170.10        | 60.7%          |
 | TFT      | 285.50         | 190.50         | 95.00         | 33.3%          |

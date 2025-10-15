@@ -22,7 +22,13 @@ void SimulatorRunner::run() {
         printer_.printComplexityTable(strategies_);
     }
     
-    // 噪声扫描模式
+    // Q3: 剥削者详细对战模式
+    if (config_.show_exploiter) {
+        runShowExploiter();
+        return;  // 运行完剥削者测试后返回
+    }
+    
+    // Q2:噪声扫描模式
     if (config_.noise_sweep) {
         runNoiseSweep();
     }
@@ -32,6 +38,11 @@ void SimulatorRunner::run() {
     else {
         runSimulation();
         printer_.printTournamentResults(results_);
+        
+        // Q3: 如果启用了混合人群分析
+        if (config_.analyze_mixed) {
+            runMixedPopulationAnalysis();
+        }
     }
 }
 
@@ -95,7 +106,11 @@ void SimulatorRunner::setupStrategies() {
 
 void SimulatorRunner::runSimulation() {
     std::cout << "\n--- Tournament Start ---\n";
-    results_ = simulator_.runTournament(strategies_, config_.rounds, config_.repeats);
+    auto [stats, matchResults] = simulator_.runTournament(strategies_, config_.rounds, config_.repeats);
+    results_ = stats;
+    
+    // 打印对战矩阵
+    printer_.printMatchTable(strategies_, matchResults);
 }
 
 void SimulatorRunner::runExploiter() {
@@ -280,40 +295,6 @@ void SimulatorRunner::updatePopulations(
     }
 }
 
-Config SimulatorRunner::parseArguments(int argc, char** argv) {
-    CLI::App app{ "Iterated Prisoner's Dilemma Simulator" };
-    Config config;
-
-    app.add_option("--rounds", config.rounds, "Number of rounds per match.");
-    app.add_option("--repeats", config.repeats, "Number of repetitions per match to compute the average score.");
-    app.add_option("--epsilon", config.epsilon, "Probability of random action (error rate).");
-    app.add_option("--seed", config.seed, "Random seed for reproducibility.");
-    app.add_option("--payoffs", config.payoffs, "Payoff values [T, R, P, S].")->expected(4);
-    app.add_option("--strategies", config.strategy_names, "List of participating strategies.");
-    app.add_option("--format", config.format, "Output format (text, csv, json).");
-    app.add_option("--save", config.save_file, "File path to save the current configuration.");
-    app.add_option("--load", config.load_file, "File path to load a saved configuration.");
-    app.add_flag("--evolve", config.evolve, "Enable evolutionary simulation mode.");
-    app.add_option("--generations", config.generations, "Number of generations for the evolutionary simulation.");
-    
-    // 噪声扫描参数
-    app.add_flag("--noise-sweep", config.noise_sweep, "Enable noise sweep analysis mode.");
-    app.add_option("--epsilon-values", config.epsilon_values, "List of epsilon values for noise sweep.");
-    
-    // SCB: 添加命令行参数
-    app.add_flag("--enable-scb", config.enable_scb, "Enable Strategic Complexity Budget.");
-    app.add_option("--scb-cost", config.scb_cost_factor, "SCB cost factor per complexity unit per round.");
-    
-    try {
-        app.parse(argc, argv);
-    }
-    catch (const CLI::ParseError& e) {
-        throw std::runtime_error("Command-line argument parsing error. Please check your input. Error: " + std::string(e.what()));
-    }
-
-    return config;
-}
-
 // 噪声扫描：在不同噪声水平下运行锦标赛
 void SimulatorRunner::runNoiseSweep() {
     std::cout << "\n=================================================\n";
@@ -342,7 +323,7 @@ SimulatorRunner::executeNoiseSweep(const std::vector<double>& epsilon_values) {
     std::map<double, std::map<std::string, ScoreStats>> all_results;
     
     for (double epsilon : epsilon_values) {
-        std::cout << "\n--- Running tournament with ε = " << epsilon << " ---\n";
+        std::cout << "\n--- Running tournament with epsilon = " << epsilon << " ---\n";
         
         // 设置当前噪声水平
         Strategy::setNoise(epsilon);
@@ -353,16 +334,15 @@ SimulatorRunner::executeNoiseSweep(const std::vector<double>& epsilon_values) {
         }
         
         // 运行锦标赛
-        auto results = simulator_.runTournament(strategies_, config_.rounds, config_.repeats);
+        auto [stats, matchResults] = simulator_.runTournament(strategies_, config_.rounds, config_.repeats);
+        
+        // 打印对战矩阵
+        printer_.printMatchTable(strategies_, matchResults);
         
         // 存储结果
-        all_results[epsilon] = results;
+        all_results[epsilon] = stats;
         
-        // 简要输出当前结果
-        std::cout << "Results for ε = " << epsilon << ":\n";
-        for (const auto& [name, stats] : results) {
-            std::cout << "  " << name << ": " << stats.mean << "\n";
-        }
+		printer_.printTournamentResults(stats);
     }
     
     // 恢复原始噪声设置
@@ -380,13 +360,15 @@ void SimulatorRunner::runSCBComparison() {
     // 第一次运行：不启用 SCB
     std::cout << "\n--- Running Tournament WITHOUT SCB ---\n";
     Strategy::enableSCB(false);
-    auto results_without_scb = simulator_.runTournament(strategies_, config_.rounds, config_.repeats);
+    auto [results_without_scb, matchResults1] = simulator_.runTournament(strategies_, config_.rounds, config_.repeats);
+    printer_.printMatchTable(strategies_, matchResults1);
 
     // 第二次运行：启用 SCB
     std::cout << "\n--- Running Tournament WITH SCB ---\n";
     Strategy::enableSCB(true);
     Strategy::setSCBCostFactor(config_.scb_cost_factor);
-    auto results_with_scb = simulator_.runTournament(strategies_, config_.rounds, config_.repeats);
+    auto [results_with_scb, matchResults2] = simulator_.runTournament(strategies_, config_.rounds, config_.repeats);
+    printer_.printMatchTable(strategies_, matchResults2);
 
     // 打印对比结果
     printer_.printSCBComparison(results_without_scb, results_with_scb);
@@ -394,4 +376,130 @@ void SimulatorRunner::runSCBComparison() {
 
     // 恢复原始配置
     Strategy::enableSCB(config_.enable_scb);
+}
+
+// Q3: 展示剥削者 vs 对手的详细对战
+void SimulatorRunner::runShowExploiter() {
+    if (strategies_.size() < 2) {
+        std::cerr << "Error: Need at least 2 strategies (exploiter + victim(s))\n";
+        return;
+    }
+    
+    std::cout << "\n=================================================\n";
+    std::cout << "    Exploiter Detailed Match Mode\n";
+    std::cout << "=================================================\n\n";
+    
+    const auto& exploiter = strategies_[0];
+    std::string exploiter_name = exploiter->getName();
+    std::cout << "Exploiter: " << exploiter_name << "\n";
+    std::cout << "Victims: ";
+    for (size_t i = 1; i < strategies_.size(); ++i) {
+        std::cout << strategies_[i]->getName();
+        if (i < strategies_.size() - 1) std::cout << ", ";
+    }
+    std::cout << "\n";
+    
+    // 对每个受害者策略进行详细对战
+    for (size_t i = 1; i < strategies_.size(); ++i) {
+        const auto& victim = strategies_[i];
+        std::string victim_name = victim->getName();
+        
+        std::vector<double> exploiter_scores;
+        std::vector<double> victim_scores;
+
+        // 运行多次重复实验
+        for (int r = 0; r < config_.repeats; ++r) {
+            exploiter->reset();
+            victim->reset();
+
+            ScorePair scores = simulator_.runGame(exploiter, victim, config_.rounds);
+            exploiter_scores.push_back(scores.first);
+            victim_scores.push_back(scores.second);
+        }
+
+        // 计算统计数据
+        ScoreStats exploiter_stats = simulator_.calculateStats(exploiter_scores);
+        ScoreStats victim_stats = simulator_.calculateStats(victim_scores);
+        
+        // 使用 ResultsPrinter 打印详细结果
+        printer_.showExploiterVsOpponent(
+            exploiter_name,
+            victim_name,
+            exploiter_stats,
+            victim_stats,
+            config_.repeats,
+            config_.rounds
+        );
+    }
+    
+    std::cout << "\n--- All exploiter matches completed ---\n";
+}
+
+// Q3: 分析剥削者在混合人群中的表现
+void SimulatorRunner::runMixedPopulationAnalysis() {
+    // 检测策略列表中是否有剥削型策略
+    std::vector<std::string> exploiter_names = {"PROBER", "ALLD"};
+    std::string found_exploiter;
+    
+    for (const auto& exploiter : exploiter_names) {
+        if (results_.find(exploiter) != results_.end()) {
+            found_exploiter = exploiter;
+            break;
+        }
+    }
+    
+    if (found_exploiter.empty()) {
+        std::cerr << "\nWarning: No exploiter strategy (PROBER or ALLD) found in tournament.\n";
+        std::cerr << "         Mixed population analysis requires an exploiter strategy.\n";
+        return;
+    }
+    
+    // 调用 ResultsPrinter 的分析函数
+    printer_.analyzeMixedPopulation(results_, found_exploiter);
+}
+
+
+Config SimulatorRunner::parseArguments(int argc, char** argv) {
+    CLI::App app{ "Iterated Prisoner's Dilemma Simulator" };
+    Config config;
+
+    app.add_option("--rounds", config.rounds, "Number of rounds per match.");
+    app.add_option("--repeats", config.repeats, "Number of repetitions per match to compute the average score.");
+    app.add_option("--epsilon", config.epsilon, "Probability of random action (error rate).");
+    app.add_option("--seed", config.seed, "Random seed for reproducibility.");
+    app.add_option("--payoffs", config.payoffs, "Payoff values [T, R, P, S].")->expected(4);
+    app.add_option("--strategies,--strategy_names", config.strategy_names, "List of participating strategies.");
+    //app.add_option("--format", config.format, "Output format (text, csv, json).");
+    //app.add_option("--save", config.save_file, "File path to save the current configuration.");
+    //app.add_option("--load", config.load_file, "File path to load a saved configuration.");
+    app.add_flag("--evolve", config.evolve, "Enable evolutionary simulation mode.");
+    app.add_option("--generations", config.generations, "Number of generations for the evolutionary simulation.");
+
+    // 噪声扫描参数 - 同时支持连字符和下划线格式
+    app.add_flag("--noise-sweep,--noise_sweep", config.noise_sweep, "Enable noise sweep analysis mode.");
+    app.add_option("--epsilon-values,--epsilon_values", config.epsilon_values, "List of epsilon values for noise sweep.");
+
+    // Q3: 剥削者测试参数
+    app.add_flag("--show-exploiter,--show_exploiter", config.show_exploiter,
+        "Show detailed exploiter vs opponent matches (first strategy is exploiter).");
+    app.add_flag("--analyze-mixed,--analyze_mixed", config.analyze_mixed,
+        "Analyze exploiter performance in mixed population (requires PROBER or ALLD in strategies).");
+
+    // SCB: 添加命令行参数
+    app.add_flag("--enable-scb,--enable_scb", config.enable_scb, "Enable Strategic Complexity Budget.");
+    app.add_option("--scb-cost,--scb_cost", config.scb_cost_factor, "SCB cost factor per complexity unit per round.");
+
+    try {
+        app.parse(argc, argv);
+    }
+    catch (const CLI::CallForHelp& e) {
+        std::cout << app.help() << std::endl;
+        std::exit(0);   // 打印帮助并退出
+    }
+    catch (const CLI::ParseError& e) {
+        std::exit(app.exit(e));  // 打印错误并退出
+    }
+
+
+    return config;
 }

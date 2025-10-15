@@ -30,6 +30,16 @@ public:
     static Config parseArguments(int argc, char** argv);
 
 private:
+
+    // 根据策略名称创建策略实例的工厂函数。
+    static std::unique_ptr<Strategy> createStrategy(const std::string& name);
+    Config config_;
+    std::vector<std::unique_ptr<Strategy>> strategies_;
+    Simulator simulator_;
+    std::map<std::string, ScoreStats> results_; // 用于存储模拟结果（包括置信区间）
+    ResultsPrinter printer_;
+
+
     // 根据配置中的名称初始化策略对象向量。
     void setupStrategies();
 
@@ -46,6 +56,12 @@ private:
     void runNoiseSweep();
     std::map<double, std::map<std::string, ScoreStats>> executeNoiseSweep(const std::vector<double>& epsilon_values);
 
+    // Q3: 运行剥削者详细对战
+    void runShowExploiter();
+    
+    // Q3: 运行混合人群分析
+    void runMixedPopulationAnalysis();
+
     double playMultipleGames(
         const std::unique_ptr<Strategy>& strat_i,
         const std::unique_ptr<Strategy>& strat_j,
@@ -57,13 +73,6 @@ private:
 
     // SCB: 运行带有 SCB 对比的锦标赛
     void runSCBComparison();
-
-    // 以用户指定的格式打印最终结果。
-    void printResults() const;
-
-    // 打印策略分析
-    void printAnalysisQ1() const;
-
     void printExploiterMatchTable(
         const std::string& exploiter_name,
         const std::map<std::string, std::pair<double, double>>& matchAverages) const;
@@ -71,14 +80,6 @@ private:
     void printExploiterResults(
         const std::string& exploiter_name,
 		const std::map<std::string, std::pair<ScoreStats, ScoreStats>>& results) const;
-    // 根据策略名称创建策略实例的工厂函数。
-    static std::unique_ptr<Strategy> createStrategy(const std::string& name);
-
-    Config config_;
-    std::vector<std::unique_ptr<Strategy>> strategies_;
-    Simulator simulator_;
-    std::map<std::string, ScoreStats> results_; // 用于存储模拟结果（包括置信区间）
-    ResultsPrinter printer_;  // 输出打印器
 };
 
 #endif // SIMULATORRUNNER_H

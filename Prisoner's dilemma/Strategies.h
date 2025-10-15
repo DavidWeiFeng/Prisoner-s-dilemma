@@ -180,7 +180,7 @@ public:
 // 随机策略
 class RandomStrategy : public Strategy {
 private:
-    double p; // 合作概率
+    double      p; // 合作概率
     mutable std::mt19937 gen; // 随机数生成器
     mutable std::uniform_real_distribution<double> dist; // 0~1均匀分布
 

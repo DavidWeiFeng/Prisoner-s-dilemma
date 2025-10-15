@@ -33,13 +33,16 @@ public:
     /// 打印锦标赛结果表格
     void printTournamentResults(const std::map<std::string, ScoreStats>& results) const;
     
-    /// 导出锦标赛结果到 CSV 文件
-    void exportTournamentResultsToCSV(const std::map<std::string, ScoreStats>& results, const std::string& filename) const;
-    
-    /// 打印策略分析
-    void printAnalysis(const std::string& analysis_text) const;
+    /// 打印对战结果矩阵（从 Simulator 移动过来）
+    void printMatchTable(
+        const std::vector<std::unique_ptr<Strategy>>& strategies,
+        const std::vector<std::vector<std::pair<double, double>>>& matchResults) const;
     
     // ==================== 噪声分析打印 ====================
+    
+    /// 打印噪声扫描结果表格（从 Simulator 移动过来）
+    void printNoiseSweepTable(
+        const std::map<double, std::map<std::string, ScoreStats>>& results) const;
     
     /// 打印噪声分析表格
     void printNoiseAnalysisTable(
@@ -57,36 +60,29 @@ public:
         const std::string& exploiter_name,
         const std::map<std::string, std::pair<double, double>>& matchAverages) const;
     
-    /// 打印剥削者测试结果（完整版）
-    void printExploiterResults(
+    /// 展示剥削者 vs 单个对手的详细对战结果（从 Simulator 移动过来）
+    void showExploiterVsOpponent(
         const std::string& exploiter_name,
-        const std::map<std::string, std::pair<ScoreStats, ScoreStats>>& results) const;
+        const std::string& victim_name,
+        const ScoreStats& exploiter_stats,
+        const ScoreStats& victim_stats,
+        int repeats,
+        int rounds) const;
+    
+    /// 分析剥削型策略在混合种群中的表现（从 Simulator 移动过来）
+    void analyzeMixedPopulation(
+        const std::map<std::string, ScoreStats>& results,
+        const std::string& exploiter_name) const;
 
     // ==================== 进化模拟打印 ====================
     
     /// 打印进化模拟标题
     void printEvolutionHeader() const;
-    
-    /// 打印单代种群信息
-    void printGeneration(
-        int gen, 
-        const std::map<std::string, double>& populations,
-        const std::vector<std::unique_ptr<Strategy>>& strategies) const;
-    
     /// 打印完整的进化历史表格（在所有代完成后）
     void printEvolutionHistory(
         const std::vector<std::map<std::string, double>>& history,
         const std::vector<std::unique_ptr<Strategy>>& strategies,
         const std::string& label) const;
-    
-    /// 打印详细的单代信息（包含适应度）
-    void printGenerationDetailed(
-        int gen,
-        const std::map<std::string, double>& populations,
-        const std::map<std::string, double>& fitness,
-        double avg_fitness,
-        const std::vector<std::unique_ptr<Strategy>>& strategies) const;
-
     // ==================== SCB (Strategic Complexity Budget) 打印 ====================
     
     /// 打印策略复杂度信息表

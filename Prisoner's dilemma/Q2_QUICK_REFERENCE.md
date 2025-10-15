@@ -17,7 +17,7 @@
 
 ### 1. 控制台表格
 ```
-Epsilon (ε) | TitForTat | GrimTrigger | PAVLOV | ContriteTitForTat
+Epsilon (epsilon) | TitForTat | GrimTrigger | PAVLOV | ContriteTitForTat
 ------------|-----------|-------------|--------|-------------------
 0.00        | 285.50    | 280.30      | 275.80 | 283.20
 0.20        | 190.50    | 110.20      | 210.30 | 225.40
@@ -35,7 +35,7 @@ Epsilon,Strategy,Mean,StdDev,CI_Lower,CI_Upper
 
 ### 策略表现排名（从最差到最好）
 
-**在 ε=0.2 时：**
+**在 epsilon=0.2 时：**
 
 1. **GRIM** - 崩溃 ❌
    - 得分降幅: ~60%
@@ -59,9 +59,9 @@ Epsilon,Strategy,Mean,StdDev,CI_Lower,CI_Upper
 Q2: Reciprocity under Noise (10 marks)
 
 Implementation:
-- Noise mechanism: Each move flips with probability ε
+- Noise mechanism: Each move flips with probability epsilon
 - Tested strategies: TFT, GRIM, PAVLOV, CTFT
-- Noise range: ε ∈ {0.0, 0.05, 0.1, 0.15, 0.2}
+- Noise range: epsilon ∈ {0.0, 0.05, 0.1, 0.15, 0.2}
 - Configuration: 100 rounds, 10 repeats per match
 
 Results:
@@ -170,7 +170,7 @@ A: 使用固定的 `--seed` 参数保证可重复性
 
 **记住**: 
 - 噪声 = 实现错误（implementation noise）
-- ε = 每个动作翻转的概率
+- epsilon = 每个动作翻转的概率
 - 目标 = 找出在噪声下仍能维持合作的策略
 
 **核心洞察**:
