@@ -29,6 +29,9 @@
     <ClInclude Include="SimulatorRunner.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="ResultsPrinter.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -37,5 +40,11 @@
     <ClCompile Include="SimulatorRunner.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="ResultsPrinter.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="REFACTORING_SUMMARY.md" />
   </ItemGroup>
 </Project>

@@ -14,6 +14,11 @@ public:
         return std::make_unique<AllCooperate>(*this);
     }
 
+    // SCB: 复杂度评分
+    double getComplexity() const override { return 1.0; }
+    std::string getComplexityReason() const override {
+        return "No memory, fixed output";
+    }
 };
 
 // 永远背叛 (ALLD)
@@ -25,6 +30,12 @@ public:
     std::string getName() const override { return "ALLD"; }
     std::unique_ptr<Strategy> clone() const override {
         return std::make_unique<AllDefect>(*this);
+    }
+
+    // SCB: 复杂度评分
+    double getComplexity() const override { return 1.0; }
+    std::string getComplexityReason() const override {
+        return "No memory, fixed output";
     }
 };
 
@@ -41,6 +52,12 @@ public:
 
     std::unique_ptr<Strategy> clone() const override {
         return std::make_unique<TitForTat>(*this);
+    }
+
+    // SCB: 复杂度评分
+    double getComplexity() const override { return 2.0; }
+    std::string getComplexityReason() const override {
+        return "1-round memory, simple mirroring";
     }
 };
 
@@ -67,6 +84,12 @@ public:
     std::unique_ptr<Strategy> clone() const override {
         return std::make_unique<GrimTrigger>(*this);
     }
+
+    // SCB: 复杂度评分
+    double getComplexity() const override { return 2.5; }
+    std::string getComplexityReason() const override {
+        return "Memory + permanent state switch";
+    }
 };
 
 // PAVLOV (Win-Stay-Lose-Shift)
@@ -89,6 +112,12 @@ public:
     std::string getName() const override { return "PAVLOV"; }
     std::unique_ptr<Strategy> clone() const override {
         return std::make_unique<PAVLOV>(*this);
+    }
+
+    // SCB: 复杂度评分
+    double getComplexity() const override { return 2.5; }
+    std::string getComplexityReason() const override {
+        return "Outcome memory + conditional logic";
     }
 };
 
@@ -141,6 +170,11 @@ public:
         return std::make_unique<ContriteTitForTat>(*this);
     }
 
+    // SCB: 复杂度评分
+    double getComplexity() const override { return 3.5; }
+    std::string getComplexityReason() const override {
+        return "Multi-round memory + noise detection";
+    }
 };
 
 // 随机策略
@@ -169,6 +203,12 @@ public:
 
     std::unique_ptr<Strategy> clone() const override {
         return std::make_unique<RandomStrategy>(*this);
+    }
+
+    // SCB: 复杂度评分
+    double getComplexity() const override { return 1.5; }
+    std::string getComplexityReason() const override {
+        return "Random number generation";
     }
 };
 
@@ -215,6 +255,12 @@ public:
     }
     std::unique_ptr<Strategy> clone() const override {
         return std::make_unique<PROBER>(*this);
+    }
+
+    // SCB: 复杂度评分
+    double getComplexity() const override { return 3.5; }
+    std::string getComplexityReason() const override {
+        return "Probe sequence + conditional branching";
     }
 };
 

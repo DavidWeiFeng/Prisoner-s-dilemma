@@ -21,10 +21,10 @@ struct Config {
 
     
     //std::vector<std::string> strategy_names = { "AllCooperate", "AllDefect","TitForTat","GrimTrigger","PAVLOV"};
-    //std::vector<std::string> strategy_names = { "AllCooperate", "AllDefect","TitForTat","GrimTrigger","PAVLOV","CTFT","PROBER" };
+    std::vector<std::string> strategy_names = { "AllCooperate", "AllDefect","TitForTat","GrimTrigger","PAVLOV","ContriteTitForTat","PROBER" };
 
      //std::vector<std::string> strategy_names = { "AllDefect","AllCooperate","TitForTat","ContriteTitForTat","PAVLOV"};
-     std::vector<std::string> strategy_names = { "PROBER","AllCooperate","TitForTat" };
+     //std::vector<std::string> strategy_names = { "PROBER","AllCooperate","TitForTat" };
 
 
     std::string format = "text";
@@ -36,6 +36,9 @@ struct Config {
     int generations = 50;
 	bool  exploiters = false;      // 是否包含剥削者策略
 
+    // SCB (Strategic Complexity Budget) 参数
+    bool enable_scb = false;           // 是否启用战略复杂度预算
+    double scb_cost_factor = 0.1;      // 每单位复杂度每轮的成本系数
 };
 
 #endif // CONFIG_H

@@ -128,16 +128,21 @@
   <ItemGroup>
     <ClInclude Include="CLI.hpp" />
     <ClInclude Include="Config.h" />
+    <ClInclude Include="ResultsPrinter.h" />
     <ClInclude Include="Simulator.h" />
     <ClInclude Include="Strategies.h" />
     <ClInclude Include="Strategy.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="ResultsPrinter.cpp" />
     <ClCompile Include="SimulatorRunner.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClCompile>
     <ClInclude Include="SimulatorRunner.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="REFACTORING_SUMMARY.md" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

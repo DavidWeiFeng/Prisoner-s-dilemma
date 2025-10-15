@@ -9,13 +9,14 @@
 #include "Config.h"
 #include "Strategy.h"
 #include "Simulator.h"
+#include "ResultsPrinter.h"
 
 /**
  * @class SimulatorRunner
  * @brief 协调主要的应用逻辑。
  *
- * 该类负责根据提供的配置来设置策略、打印配置信息、
- * 运行模拟并显示结果。它封装了程序的核心工作流程。
+ * 该类负责根据提供的配置来设置策略、运行模拟并协调输出。
+ * 所有打印功能已移至 ResultsPrinter 类。
  */
 class SimulatorRunner {
 public:
@@ -32,22 +33,14 @@ private:
     // 根据配置中的名称初始化策略对象向量。
     void setupStrategies();
 
-    // 将模拟和进化参数打印到控制台。
-    void printConfiguration() const;
-
-    // 打印收益矩阵
-    void printPayoffMatrix() const;
-
     // 执行主要的锦标赛或进化模拟。
     void runSimulation();
-
-	void runExploiter();
+    void runExploiter();
 
     // 新增：运行进化模拟
     void runEvolution();
-    std::vector<std::map<std::string, double>>  runSingleEvolution(double noise, const std::string& label);
-    std::map<std::string, double>calculateFitness(const std::map<std::string, double>& populations, int rounds, int repeats);
-    void printGeneration(int gen, const std::map<std::string, double>& populations);
+    std::vector<std::map<std::string, double>> runSingleEvolution(double noise, const std::string& label);
+    std::map<std::string, double> calculateFitness(const std::map<std::string, double>& populations, int rounds, int repeats);
 
     double playMultipleGames(
         const std::unique_ptr<Strategy>& strat_i,
@@ -57,6 +50,9 @@ private:
     void updatePopulations(
         std::map<std::string, double>& populations,
 		const std::map<std::string, double>& fitness);
+
+    // SCB: 运行带有 SCB 对比的锦标赛
+    void runSCBComparison();
 
     // 以用户指定的格式打印最终结果。
     void printResults() const;
@@ -78,6 +74,7 @@ private:
     std::vector<std::unique_ptr<Strategy>> strategies_;
     Simulator simulator_;
     std::map<std::string, ScoreStats> results_; // 用于存储模拟结果（包括置信区间）
+    ResultsPrinter printer_;  // 输出打印器
 };
 
 #endif // SIMULATORRUNNER_H

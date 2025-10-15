@@ -80,6 +80,15 @@ public:
             history1.push_back({ move1, move2 });  // player1: 我出move1，对手出move2
             history2.push_back({ move2, move1 });  // player2: 我出move2，
         }
+
+        // SCB: 如果启用了复杂度成本，从最终得分中扣除
+        if (Strategy::isSCBEnabled()) {
+            double cost1 = p1->getComplexity() * Strategy::getSCBCostFactor() * rounds;
+            double cost2 = p2->getComplexity() * Strategy::getSCBCostFactor() * rounds;
+            score1 -= cost1;
+            score2 -= cost2;
+        }
+
         return { score1, score2 };
     }
     // Calculate mean and standard deviation from a vector of scores
