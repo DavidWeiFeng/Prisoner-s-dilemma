@@ -289,7 +289,7 @@ void SimulatorRunner::updatePopulations(
 
     std::map<std::string, double> new_populations;
     for (const auto& [name, pop] : populations) {
-        new_populations[name] = pop * (fitness.at(name) / avg_fitness);
+        new_populations[name] = pop * (fitness.at(name) / avg_fitness);  //new_population = old_population × (fitness / average_fitness)
     }
 
     populations = new_populations;
