@@ -95,6 +95,14 @@ public:
         const std::vector<std::map<std::string, double>>& history,
         const std::vector<std::unique_ptr<Strategy>>& strategies,
         const std::string& label) const;
+    
+    /// Print real-time population changes during SCB evolution
+    void printSCBEvolutionProgress(
+        int generation,
+        const std::map<std::string, double>& populations,
+        const std::vector<std::unique_ptr<Strategy>>& strategies,
+        bool show_scb_costs = true) const;
+    
     // ==================== SCB (Strategic Complexity Budget) Printing ====================
     
     /// Print strategy complexity information table

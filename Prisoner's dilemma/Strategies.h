@@ -265,6 +265,157 @@ public:
     }
 };
 
+class MemoryTwo : public Strategy {
+public:
+    Move decide(const History& history) const override {
+        size_t round = history.size();
+
+        // First two rounds: trust-building phase, default to cooperation
+        if (round < 2) {
+            return Move::Cooperate;
+        }
+
+        // Get the opponent's moves from the last two rounds
+        Move oppLastMove = history[round - 1].second;       // Last round
+        Move oppSecondLastMove = history[round - 2].second; // Second-to-last round
+
+        // Decision rules: based on the opponent’s behavior in the past two rounds
+
+        // Rule 1: Opponent cooperated in both rounds → reward cooperation
+        if (oppLastMove == Move::Cooperate && oppSecondLastMove == Move::Cooperate) {
+            return Move::Cooperate;
+        }
+
+        // Rule 2: Opponent defected in both rounds → recognize hostility and retaliate
+        if (oppLastMove == Move::Defect && oppSecondLastMove == Move::Defect) {
+            return Move::Defect;
+        }
+
+        // Rule 3: Mixed behavior (one cooperate, one defect) → give benefit of the doubt and cooperate
+        // Rationale: could be a single mistake caused by noise, not worth immediate retaliation
+        return Move::Cooperate;
+    }
+
+    std::string getName() const override { return "MEM2"; }
+
+    std::unique_ptr<Strategy> clone() const override {
+        return std::make_unique<MemoryTwo>(*this);
+    }
+
+    // SCB: Strategy complexity score
+    double getComplexity() const override { return 2.5; }
+
+    std::string getComplexityReason() const override {
+        return "2-round memory + pattern recognition";
+    }
+};
+
+
+class SoftGrudger : public Strategy {
+private:
+    // State machine: defines four working states of the strategy
+    enum class State {
+        COOPERATING,        // Cooperation mode
+        PUNISHING,          // Punishment mode
+        RECONCILING,        // Reconciliation mode
+        PERMANENT_DEFECT    // Permanent defection mode
+    };
+
+    // State variables (mutable allows modification inside const functions)
+    mutable State state = State::COOPERATING;
+    mutable int punishCounter = 0;      // Counter for punishment rounds
+    mutable int reconcileCounter = 0;   // Counter for reconciliation rounds
+
+    // Configurable parameters
+    static constexpr int PUNISH_ROUNDS = 4;     // Number of punishment rounds
+    static constexpr int RECONCILE_ROUNDS = 2;  // Number of reconciliation rounds
+
+public:
+    Move decide(const History& history) const override {
+        // First round: initialize state and cooperate
+        if (history.empty()) {
+            state = State::COOPERATING;
+            return Move::Cooperate;
+        }
+
+        // Get opponent's move from the previous round
+        Move oppLastMove = history.back().second;
+
+        // Finite state machine: make decisions based on current state and opponent's move
+        switch (state) {
+            // ==================== State 1: Cooperation mode ====================
+        case State::COOPERATING:
+            // If the opponent defects, switch to punishment mode
+            if (oppLastMove == Move::Defect) {
+                state = State::PUNISHING;
+                punishCounter = 1; // Start counting (current round counts as the first punishment)
+                return Move::Defect; // Immediate retaliation
+            }
+            // Opponent cooperates → continue cooperating
+            return Move::Cooperate;
+
+            // ==================== State 2: Punishment mode ====================
+        case State::PUNISHING:
+            punishCounter++;
+
+            // After punishment period ends → attempt reconciliation
+            if (punishCounter >= PUNISH_ROUNDS) {
+                state = State::RECONCILING;
+                reconcileCounter = 0;
+                return Move::Cooperate; // Offer an olive branch
+            }
+
+            // Continue punishing
+            return Move::Defect;
+
+            // ==================== State 3: Reconciliation mode ====================
+        case State::RECONCILING:
+            reconcileCounter++;
+
+            // If the opponent defects again during reconciliation → no more forgiveness
+            if (oppLastMove == Move::Defect) {
+                state = State::PERMANENT_DEFECT;
+                return Move::Defect;
+            }
+
+            // If reconciliation period ends and opponent cooperated consistently → restore trust
+            if (reconcileCounter >= RECONCILE_ROUNDS) {
+                state = State::COOPERATING;
+            }
+
+            // Continue testing opponent’s sincerity
+            return Move::Cooperate;
+
+            // ==================== State 4: Permanent defection mode ====================
+        case State::PERMANENT_DEFECT:
+            // Never forgive again
+            return Move::Defect;
+        }
+
+        // Default return (should never reach here)
+        return Move::Cooperate;
+    }
+
+    std::string getName() const override { return "SOFTG"; }
+
+    // Reset function: called when a new game starts
+    void reset() const override {
+        state = State::COOPERATING;
+        punishCounter = 0;
+        reconcileCounter = 0;
+    }
+
+    std::unique_ptr<Strategy> clone() const override {
+        return std::make_unique<SoftGrudger>(*this);
+    }
+
+    // SCB: Strategy complexity score
+    double getComplexity() const override { return 4.0; }
+
+    std::string getComplexityReason() const override {
+        return "Multi-state FSM + round counters + forgiveness logic";
+    }
+};
 
 #endif // STRATEGIES_H
 

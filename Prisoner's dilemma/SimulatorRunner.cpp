@@ -271,6 +271,9 @@ SimulatorRunner::runSingleEvolution(double noise, const std::string& label) {
     for (int gen = 0; gen < config_.generations; gen++) {
         history.push_back(populations);
         
+        // Print real-time population changes (SCB-aware)
+        printer_.printSCBEvolutionProgress(gen, populations, strategies_, Strategy::isSCBEnabled());
+        
         if (gen == config_.generations - 1) break;
 
         auto fitness = calculateFitness(populations, config_.rounds, config_.repeats);

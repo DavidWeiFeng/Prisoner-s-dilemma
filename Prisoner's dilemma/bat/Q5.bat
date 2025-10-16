@@ -1,3 +1,3 @@
 @echo off
-"Prisoner's dilemma.exe" --scb-compare --scb-cost 0.1 --strategies AllCooperate TitForTat PAVLOV ContriteTitForTat PROBER --rounds 100 --repeats 10 --format csv
+"Prisoner's dilemma.exe" --evolve --generations 25 --strategies AllCooperate AllDefect TitForTat PAVLOV ContriteTitForTat --rounds 100 --repeats 5 --epsilon 0.05 --enable-scb --scb-cost 0.2
 pause

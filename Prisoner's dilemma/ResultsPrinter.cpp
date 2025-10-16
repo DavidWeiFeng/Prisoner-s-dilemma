@@ -787,6 +787,93 @@ void ResultsPrinter::printESSAnalysis(
     std::cout << "\n";
 }
 
+void ResultsPrinter::printSCBEvolutionProgress(
+    int generation,
+    const std::map<std::string, double>& populations,
+    const std::vector<std::unique_ptr<Strategy>>& strategies,
+    bool show_scb_costs) const {
+    
+    // Only print every 5 generations + first and last
+    if (generation % 5 != 0 && generation != 0) {
+        return;
+    }
+    
+    std::cout << "\n--- Generation " << generation << " ---\n";
+    
+    tabulate::Table table;
+    
+    // Build header based on whether SCB is enabled
+    std::vector<std::string> header = {"Strategy", "Population %"};
+    if (show_scb_costs && Strategy::isSCBEnabled()) {
+        header.push_back("Complexity");
+        header.push_back("SCB Cost/Round");
+    }
+    table.add_row({header.begin(), header.end()});
+    
+    // Sort strategies by population (descending)
+    std::vector<std::pair<std::string, double>> sorted_pops;
+    for (const auto& s : strategies) {
+        sorted_pops.push_back({s->getName(), populations.at(s->getName())});
+    }
+    std::sort(sorted_pops.begin(), sorted_pops.end(),
+             [](const auto& a, const auto& b) { return a.second > b.second; });
+    
+    // Add data rows
+    for (const auto& [name, pop] : sorted_pops) {
+        double pop_percent = pop * 100.0;
+        
+        std::vector<std::string> row;
+        row.push_back(name);
+        row.push_back(formatDouble(pop_percent, 2) + "%");
+        
+        if (show_scb_costs && Strategy::isSCBEnabled()) {
+            // Find strategy complexity
+            double complexity = 0.0;
+            for (const auto& s : strategies) {
+                if (s->getName() == name) {
+                    complexity = s->getComplexity();
+                    break;
+                }
+            }
+            
+            double cost_per_round = complexity * Strategy::getSCBCostFactor();
+            row.push_back(formatDouble(complexity, 1));
+            row.push_back(formatDouble(cost_per_round, 3));
+        }
+        
+        table.add_row({row.begin(), row.end()});
+        
+        // Color code based on population
+        size_t row_idx = table.size() - 1;
+        if (pop_percent > 20.0) {
+            table[row_idx][0].format().font_color(tabulate::Color::green);
+        } else if (pop_percent < 5.0) {
+            table[row_idx][0].format().font_color(tabulate::Color::red);
+        }
+    }
+    
+    // Format table
+    table[0].format()
+        .font_style({tabulate::FontStyle::bold})
+        .font_color(tabulate::Color::yellow);
+    
+    table.format()
+        .font_align(tabulate::FontAlign::center)
+        .border_color(tabulate::Color::cyan);
+    
+    std::cout << table << "\n";
+    
+    // Show top 3 strategies
+    if (sorted_pops.size() >= 3) {
+        std::cout << "Top 3: " << sorted_pops[0].first 
+                  << " (" << formatDouble(sorted_pops[0].second * 100, 1) << "%), "
+                  << sorted_pops[1].first 
+                  << " (" << formatDouble(sorted_pops[1].second * 100, 1) << "%), "
+                  << sorted_pops[2].first 
+                  << " (" << formatDouble(sorted_pops[2].second * 100, 1) << "%)\n";
+    }
+}
+
 // ==================== SCB (Strategic Complexity Budget) Printing ====================
 
 void ResultsPrinter::printComplexityTable(const std::vector<std::unique_ptr<Strategy>>& strategies) const {
