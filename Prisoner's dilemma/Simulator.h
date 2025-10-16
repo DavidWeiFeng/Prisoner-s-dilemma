@@ -10,6 +10,7 @@
 #include <string>
 #include <algorithm>
 #include <cmath>
+#include <random>
 #include <tabulate/table.hpp>
 #include <numeric>
 
@@ -37,7 +38,7 @@ struct ScoreStats {
 class Simulator {
 private:
     std::vector<double> payoff_config;
-    double noise_level;  // 当前噪声水平
+    double noise_level;  // Current noise level
 
     double getScore(Move m1, Move m2) const {
         if (m1 == Move::Defect && m2 == Move::Cooperate) { return payoff_config[0]; }//T
@@ -51,7 +52,7 @@ public:
     explicit Simulator(const std::vector<double>& config, double noise = 0.0) 
         : payoff_config(config), noise_level(noise) {}
 
-    // 设置噪声水平
+    // Set noise level
     void setNoise(double epsilon) { 
         noise_level = epsilon; 
     }
@@ -60,15 +61,15 @@ public:
         return noise_level; 
     }
 
-    // 运行单场比赛，考虑噪声
+    // Run a single match, considering noise
     ScorePair runGame(const StrategyPtr& p1, const StrategyPtr& p2, int rounds) const {
-        History history1;// player1 的视角：{我的动作, 对手的动作}
+        History history1;// player1's perspective: {my move, opponent's move}
         History history2;
         double score1 = 0.0;
         double score2 = 0.0;
         
         for (int i = 1; i <= rounds; ++i) {
-            // 使用 decideWithNoise 方法获取带噪声的决策
+            // Use decideWithNoise method to get decision with noise
             Move move1 = p1->decideWithNoise(history1);
             Move move2 = p2->decideWithNoise(history2);
             
@@ -76,12 +77,12 @@ public:
             double round_score2 = getScore(move2, move1);
             score1 += round_score1;
             score2 += round_score2;
-            // update history,from each player's perspective
-            history1.push_back({ move1, move2 });  // player1: 我出move1，对手出move2
-            history2.push_back({ move2, move1 });  // player2: 我出move2，
+            // update history, from each player's perspective
+            history1.push_back({ move1, move2 });  // player1: I play move1, opponent plays move2
+            history2.push_back({ move2, move1 });  // player2: I play move2, opponent plays move1
         }
 
-        // SCB: 如果启用了复杂度成本，从最终得分中扣除
+        // SCB: If complexity cost is enabled, deduct it from final score
         if (Strategy::isSCBEnabled()) {
             double cost1 = p1->getComplexity() * Strategy::getSCBCostFactor() * rounds;
             double cost2 = p2->getComplexity() * Strategy::getSCBCostFactor() * rounds;
@@ -118,31 +119,33 @@ public:
 
         return stats;
     }
-    // 标准锦标赛 with confidence intervals
-    // 返回一个 pair: first 是策略统计结果，second 是对战矩阵（用于打印）
+    // Standard tournament with confidence intervals
+    // Returns a pair: first is strategy statistics results, second is match matrix (for printing)
     std::pair<std::map<std::string, ScoreStats>, std::vector<std::vector<ScorePair>>> 
     runTournament(const std::vector<StrategyPtr>& strategies, int rounds, int repeats) const {
-		std::map<std::string, std::vector<double>> allScores; // add all scores for each strategy
-        // 初始化
+		std::map<std::string, std::vector<double>> allScores; // collect all scores for each strategy
+        // Initialize
         for (const auto& s : strategies) {
             allScores[s->getName()] = std::vector<double>();
         }
 
-        // 存储详细对战结果用于表格显示
+        // Store detailed match results for table display
         int N = strategies.size();
         std::vector<std::vector<ScorePair>> matchResults(N, std::vector<ScorePair>(N));
 
-        // 循环赛：每个策略两两对战
+        // Round-robin: Every strategy plays against every other strategy
         for (size_t i = 0; i < strategies.size(); ++i) {
             for (size_t j = i; j < strategies.size(); ++j) {
                 const auto& p1 = strategies[i];
                 const StrategyPtr* p2_ptr;
-				// whne i==j, play with a clone of itself,to avoid state interference
+				// when i==j, play with a clone of itself, to avoid state interference
                 std::unique_ptr<Strategy> p2_clone;
 
                 if (i == j)
                 {
                     p2_clone = p1->clone();
+                    // Important: Set a new random seed for the clone to ensure different random number sequences
+                    p2_clone->setSeed(std::random_device{}());
                     p2_ptr = &p2_clone;
                 }
                 else
@@ -154,7 +157,7 @@ public:
                 std::vector<double> p2_scores;
 
                 for (int r = 0; r < repeats; ++r) {
-                    //to clean flag state
+                    // to clean flag state
                     p1.get()->reset();
                     p2.get()->reset();
 
@@ -162,12 +165,12 @@ public:
                     p1_scores.push_back(scores.first);
                     p2_scores.push_back(scores.second);
                     
-                    // 修复: 当策略对战自己时(i==j)，只添加一次分数
+                    // Fix: When a strategy plays itself (i==j), only add score once
                     if (i == j) {
-                        // 同一策略对战自己，两个分数相同，只添加一次
+                        // Same strategy playing itself, both scores are the same, only add once
                         allScores[p1->getName()].push_back(scores.first);
                     } else {
-                        // 不同策略对战，分别添加各自的分数
+                        // Different strategies playing, add each score separately
                         allScores[p1->getName()].push_back(scores.first);
                         allScores[p2->getName()].push_back(scores.second);
                     }
@@ -187,7 +190,7 @@ public:
             }
         }
 
-        // 计算每个策略的总体统计信息（包括置信区间）
+        // Calculate overall statistics for each strategy (including confidence intervals)
         std::map<std::string, ScoreStats> stats;
         for (const auto& [name, scores] : allScores) {
             stats[name] = calculateStats(scores);

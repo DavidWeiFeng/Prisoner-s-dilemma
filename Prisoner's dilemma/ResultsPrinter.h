@@ -11,56 +11,56 @@
 
 /**
  * @class ResultsPrinter
- * @brief 负责所有输出和打印功能的类
+ * @brief Class responsible for all output and printing functions
  * 
- * 该类将 SimulatorRunner 中的所有打印函数集中管理，
- * 使代码更加模块化和易于维护。
+ * This class centralizes all printing functions from SimulatorRunner,
+ * making the code more modular and maintainable.
  */
 class ResultsPrinter {
 public:
     explicit ResultsPrinter(const Config& config);
 
-    // ==================== 配置和矩阵打印 ====================
+    // ==================== Configuration and Matrix Printing ====================
     
-    /// 打印模拟器配置信息
+    /// Print simulator configuration information
     void printConfiguration(const std::vector<std::unique_ptr<Strategy>>& strategies) const;
     
-    /// 打印收益矩阵
+    /// Print payoff matrix
     void printPayoffMatrix() const;
 
-    // ==================== 锦标赛结果打印 ====================
+    // ==================== Tournament Results Printing ====================
     
-    /// 打印锦标赛结果表格
+    /// Print tournament results table
     void printTournamentResults(const std::map<std::string, ScoreStats>& results) const;
     
-    /// 打印对战结果矩阵（从 Simulator 移动过来）
+    /// Print match results matrix (moved from Simulator)
     void printMatchTable(
         const std::vector<std::unique_ptr<Strategy>>& strategies,
         const std::vector<std::vector<std::pair<double, double>>>& matchResults) const;
     
-    // ==================== 噪声分析打印 ====================
+    // ==================== Noise Analysis Printing ====================
     
-    /// 打印噪声扫描结果表格（从 Simulator 移动过来）
+    /// Print noise sweep results table (moved from Simulator)
     void printNoiseSweepTable(
         const std::map<double, std::map<std::string, ScoreStats>>& results) const;
     
-    /// 打印噪声分析表格
+    /// Print noise analysis table
     void printNoiseAnalysisTable(
         const std::map<double, std::map<std::string, ScoreStats>>& noise_results) const;
     
-    /// 导出噪声分析到 CSV 文件
+    /// Export noise analysis to CSV file
     void exportNoiseAnalysisToCSV(
         const std::map<double, std::map<std::string, ScoreStats>>& noise_results,
         const std::string& filename) const;
 
-    // ==================== 剥削者模式打印 ====================
+    // ==================== Exploiter Mode Printing ====================
     
-    /// 打印剥削者对战表格
+    /// Print exploiter match table
     void printExploiterMatchTable(
         const std::string& exploiter_name,
         const std::map<std::string, std::pair<double, double>>& matchAverages) const;
     
-    /// 展示剥削者 vs 单个对手的详细对战结果（从 Simulator 移动过来）
+    /// Show exploiter vs individual opponent detailed match results (moved from Simulator)
     void showExploiterVsOpponent(
         const std::string& exploiter_name,
         const std::string& victim_name,
@@ -69,42 +69,43 @@ public:
         int repeats,
         int rounds) const;
     
-    /// 分析剥削型策略在混合种群中的表现（从 Simulator 移动过来）
+    /// Analyze exploiter strategy performance in mixed population (moved from Simulator)
     void analyzeMixedPopulation(
         const std::map<std::string, ScoreStats>& results,
         const std::string& exploiter_name) const;
-
-    // ==================== 进化模拟打印 ====================
     
-    /// 打印进化模拟标题
+    /// Print exploiter noise comparison results (Q3 enhancement)
+    void printExploiterNoiseComparison(
+        const std::string& exploiter_name,
+        const std::map<double, std::map<std::string, std::pair<ScoreStats, ScoreStats>>>& results,
+        int repeats) const;
+
+    // ==================== Evolution Simulation Printing ====================
+    
+    /// Print evolution simulation header
     void printEvolutionHeader() const;
-    /// 打印完整的进化历史表格（在所有代完成后）
+    /// Print complete evolution history table (after all generations are complete)
     void printEvolutionHistory(
         const std::vector<std::map<std::string, double>>& history,
         const std::vector<std::unique_ptr<Strategy>>& strategies,
         const std::string& label) const;
-    // ==================== SCB (Strategic Complexity Budget) 打印 ====================
+    // ==================== SCB (Strategic Complexity Budget) Printing ====================
     
-    /// 打印策略复杂度信息表
+    /// Print strategy complexity information table
     void printComplexityTable(const std::vector<std::unique_ptr<Strategy>>& strategies) const;
     
-    /// 打印 SCB 对比结果（有/无 SCB 的锦标赛结果对比）
+    /// Print SCB comparison results (tournament results comparison with/without SCB)
     void printSCBComparison(
         const std::map<std::string, ScoreStats>& results_without_scb,
         const std::map<std::string, ScoreStats>& results_with_scb) const;
     
-    /// 打印 SCB 影响分析
-    void printSCBAnalysis(
-        const std::map<std::string, ScoreStats>& results_without_scb,
-        const std::map<std::string, ScoreStats>& results_with_scb,
-        const std::vector<std::unique_ptr<Strategy>>& strategies) const;
 
-    // ==================== 辅助函数 ====================
+    // ==================== Utility Functions ====================
     
-    /// 格式化 double 值为字符串（2位小数）
+    /// Format double value to string (2 decimal places)
     static std::string formatDouble(double value);
     
-    /// 格式化 double 值为字符串（指定精度）
+    /// Format double value to string (specified precision)
     static std::string formatDouble(double value, int precision);
 
 private:

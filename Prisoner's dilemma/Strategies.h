@@ -14,14 +14,14 @@ public:
         return std::make_unique<AllCooperate>(*this);
     }
 
-    // SCB: 复杂度评分
+    // SCB: Complexity score
     double getComplexity() const override { return 1.0; }
     std::string getComplexityReason() const override {
         return "No memory, fixed output";
     }
 };
 
-// 永远背叛 (ALLD)
+// Always Defect (ALLD)
 class AllDefect : public Strategy {
 public:
     Move decide(const History& history) const override {
@@ -32,7 +32,7 @@ public:
         return std::make_unique<AllDefect>(*this);
     }
 
-    // SCB: 复杂度评分
+    // SCB: Complexity score
     double getComplexity() const override { return 1.0; }
     std::string getComplexityReason() const override {
         return "No memory, fixed output";
@@ -44,9 +44,9 @@ class TitForTat : public Strategy {
 public:
     Move decide(const History& history) const override {
         if (history.empty()) {
-			return Move::Cooperate; // 第一轮合作
+			return Move::Cooperate; // Cooperate in the first round
         }
-		return history.back().second; // 模仿对手上次动作
+		return history.back().second; // Mimic opponent's last move
     }
 	std::string getName() const override { return "TFT"; }
 
@@ -54,7 +54,7 @@ public:
         return std::make_unique<TitForTat>(*this);
     }
 
-    // SCB: 复杂度评分
+    // SCB: Complexity score
     double getComplexity() const override { return 2.0; }
     std::string getComplexityReason() const override {
         return "1-round memory, simple mirroring";
@@ -64,16 +64,16 @@ public:
 // GRIM (Grim Trigger)
 class GrimTrigger : public Strategy {
 private:  
-    mutable bool cooperateForever = true; // 标志位：是否继续合作
+    mutable bool cooperateForever = true; // Flag: whether to continue cooperating
 public:
     Move decide(const History& history) const override {
-        // 开始合作
+        // Start by cooperating
         if (history.empty()) {
             return Move::Cooperate;
 		}
         if (cooperateForever && history.back().second == Move::Defect)
         {
-			cooperateForever = false; // 一旦对方背叛，永远背叛
+			cooperateForever = false; // Once opponent defects, defect forever
         }
 		return cooperateForever ? Move::Cooperate : Move::Defect;
     }
@@ -85,7 +85,7 @@ public:
         return std::make_unique<GrimTrigger>(*this);
     }
 
-    // SCB: 复杂度评分
+    // SCB: Complexity score
     double getComplexity() const override { return 2.5; }
     std::string getComplexityReason() const override {
         return "Memory + permanent state switch";
@@ -96,17 +96,17 @@ public:
 class PAVLOV: public Strategy {
 public:
     Move decide(const History& history) const override {
-        // 开始合作
+        // Start by cooperating
         if (history.empty()) {
             return Move::Cooperate;
         }
         if (history.back().first == history.back().second)
         {
-			return history.back().first; // 如果上次双方选择相同，则继续选择相同
+			return history.back().first; // If both chose the same last time, continue with the same choice
         }
         else
         {
-			return history.back().first == Move::Cooperate ? Move::Defect : Move::Cooperate; // 否则切换选择
+			return history.back().first == Move::Cooperate ? Move::Defect : Move::Cooperate; // Otherwise, switch choice
         }
     }
     std::string getName() const override { return "PAVLOV"; }
@@ -114,21 +114,21 @@ public:
         return std::make_unique<PAVLOV>(*this);
     }
 
-    // SCB: 复杂度评分
+    // SCB: Complexity score
     double getComplexity() const override { return 2.5; }
     std::string getComplexityReason() const override {
         return "Outcome memory + conditional logic";
     }
 };
 
-// CTFT (Contrite Tit-For-Tat) - 悔悟的针锋相对
-// 特点：能识别并修复因自己的噪声错误导致的背叛循环
+// CTFT (Contrite Tit-For-Tat) - Contrite Tit-For-Tat
+// Feature: Can identify and repair defection loops caused by its own noise errors
 class ContriteTitForTat : public Strategy {
 private:
-    mutable bool contrite = false; // 是否处于悔悟状态
+    mutable bool contrite = false; // Whether in contrite state
 public:
     Move decide(const History& history) const override {
-        // 第一轮合作
+        // Cooperate in the first round
         if (history.empty()) {
             contrite = false;
             return Move::Cooperate;
@@ -138,26 +138,26 @@ public:
         Move myLastMove = lastRound.first;
         Move oppLastMove = lastRound.second;
 
-        // 如果处于悔悟状态
+        // If in contrite state
         if (contrite) {
-            // 如果对手上轮背叛（可能是对我的背叛的回应），我继续合作表示悔悟
+            // If opponent defected last round (possibly in response to my defection), I continue cooperating to show contrition
             if (oppLastMove == Move::Defect) {
-                contrite = false; // 结束悔悟状态
+                contrite = false; // End contrite state
                 return Move::Cooperate;
             }
-            // 如果对手合作，说明我们恢复了合作
+            // If opponent cooperated, it means we've restored cooperation
             contrite = false;
             return Move::Cooperate;
         }
 
-        // 检查是否需要进入悔悟状态
-        // 如果我上次背叛但对手合作，说明可能是我的噪声错误
+        // Check if we need to enter contrite state
+        // If I defected last time but opponent cooperated, it may be due to my noise error
         if (myLastMove == Move::Defect && oppLastMove == Move::Cooperate) {
             contrite = true;
             return Move::Cooperate;
         }
 
-        // 正常的 TFT 行为：模仿对手
+        // Normal TFT behavior: mimic opponent
         return oppLastMove;
     }
 
@@ -170,30 +170,30 @@ public:
         return std::make_unique<ContriteTitForTat>(*this);
     }
 
-    // SCB: 复杂度评分
+    // SCB: Complexity score
     double getComplexity() const override { return 3.5; }
     std::string getComplexityReason() const override {
         return "Multi-round memory + noise detection";
     }
 };
 
-// 随机策略
+// Random Strategy
 class RandomStrategy : public Strategy {
 private:
-    double      p; // 合作概率
-    mutable std::mt19937 gen; // 随机数生成器
-    mutable std::uniform_real_distribution<double> dist; // 0~1均匀分布
+    double      p; // Cooperation probability
+    mutable std::mt19937 gen; // Random number generator
+    mutable std::uniform_real_distribution<double> dist; // Uniform distribution from 0 to 1
 
 public:
     RandomStrategy() : p(0.2), gen(std::random_device{}()), dist(0.0, 1.0) {
     };
-    // 构造函数：prob为合作概率，seed可选，用于复现结果
+    // Constructor: prob is cooperation probability, seed is optional for reproducibility
     RandomStrategy(double prob, unsigned int seed = std::random_device{}())
         : p(prob), gen(seed), dist(0.0, 1.0) {
     }
 
     Move decide(const History& history) const override {
-        double r = dist(gen); // 生成0~1随机数
+        double r = dist(gen); // Generate random number from 0 to 1
         return (r < p) ? Move::Cooperate : Move::Defect;
     }
 
@@ -202,51 +202,52 @@ public:
     }
 
     std::unique_ptr<Strategy> clone() const override {
-        return std::make_unique<RandomStrategy>(*this);
+        // Create new random seed to ensure clone has different random number sequence
+        return std::make_unique<RandomStrategy>(p, std::random_device{}());
     }
 
-    // SCB: 复杂度评分
+    // SCB: Complexity score
     double getComplexity() const override { return 1.5; }
     std::string getComplexityReason() const override {
         return "Random number generation";
     }
 };
 
-// PROBER - 探测者策略（剥削型）
-// 特点：通过试探找出可以剥削的对手
-// 行为：
-//   - 前四轮：C, D, C, C（合作，背叛，合作，合作）
-//   - 如果对手在第2轮（我方背叛后）仍然合作，则认为可剥削，永远背叛
-//   - 否则，采用 TFT 策略
+// PROBER - Prober strategy (exploiter type)
+// Feature: Finds exploitable opponents through probing
+// Behavior:
+//   - First four rounds: C, D, C, C (cooperate, defect, cooperate, cooperate)
+//   - If opponent still cooperates in round 2 (after our defection), consider it exploitable, always defect
+//   - Otherwise, adopt TFT strategy
 class PROBER : public Strategy {
 private:
-    mutable bool exploiting = false; // 是否进入剥削模式
+    mutable bool exploiting = false; // Whether in exploitation mode
 public:
     Move decide(const History& history) const override {
         size_t round = history.size();
 
-        // 前四轮的探测序列：C, D, C, C
+        // First four rounds probe sequence: C, D, C, C
         if (round == 0) {
-            return Move::Cooperate; // 第1轮：合作
+            return Move::Cooperate; // Round 1: cooperate
         }
         if (round == 1) {
-            return Move::Defect; // 第2轮：背叛（试探）
+            return Move::Defect; // Round 2: defect (probe)
         }
         if (round == 2) {
-            return Move::Cooperate; // 第3轮：合作
+            return Move::Cooperate; // Round 3: cooperate
         }
-        // 第4轮开始决定策略
+        // Starting from round 4, decide strategy
         if (round == 3 && !exploiting) {
             if (history[1].second == Move::Cooperate) {
                 exploiting = true;
             }
-            return Move::Cooperate; // 第4轮：合作
+            return Move::Cooperate; // Round 4: cooperate
         }
-        // 如果在剥削模式，永远背叛
+        // If in exploitation mode, always defect
         if (exploiting) {
             return Move::Defect;
         }
-        // 否则使用 TFT 策略
+        // Otherwise use TFT strategy
         return history.back().second;
     }
     std::string getName() const override { return "PROBER"; }
@@ -257,7 +258,7 @@ public:
         return std::make_unique<PROBER>(*this);
     }
 
-    // SCB: 复杂度评分
+    // SCB: Complexity score
     double getComplexity() const override { return 3.5; }
     std::string getComplexityReason() const override {
         return "Probe sequence + conditional branching";

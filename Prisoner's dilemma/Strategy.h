@@ -12,22 +12,22 @@ using History = std::vector<std::pair<Move, Move>>;
 class Strategy {
 
 inline static double noise=0.0; // Error rate
-// SCB (Strategic Complexity Budget) 相关静态变量
-inline static bool enable_scb = false;           // 是否启用战略复杂度预算
-inline static double scb_cost_factor = 0.1;      // 每单位复杂度每轮的成本系数
+// SCB (Strategic Complexity Budget) related static variables
+inline static bool enable_scb = false;           // Whether to enable Strategic Complexity Budget
+inline static double scb_cost_factor = 0.1;      // Cost coefficient per complexity unit per round
 
 private:
 	mutable std::mt19937 gen; // Random number generator
-    mutable std::uniform_real_distribution<double> dist{ 0.0, 1.0 };; // 0~1均匀分布
+    mutable std::uniform_real_distribution<double> dist{ 0.0, 1.0 };; // Uniform distribution from 0 to 1
 
 public:
 
-    // 设置噪声参数
+    // Set noise parameter
     static  void setNoise(double epsilon) { noise = epsilon; }
 	void setSeed(unsigned int seed) { gen.seed(seed); }
     double getNoise() const { return noise; }
     
-    // SCB: 设置复杂度预算参数
+    // SCB: Set complexity budget parameters
     static void enableSCB(bool enable) { enable_scb = enable; }
     static void setSCBCostFactor(double factor) { scb_cost_factor = factor; }
     static bool isSCBEnabled() { return enable_scb; }
@@ -55,10 +55,10 @@ public:
         return applyNoise(decide(history));
     }
 
-    // SCB: 返回策略的复杂度得分（纯虚函数，子类必须实现）
+    // SCB: Return strategy's complexity score (pure virtual function, must be implemented by subclasses)
     virtual double getComplexity() const = 0;
     
-    // SCB: 返回复杂度描述（可选，用于调试和报告）
+    // SCB: Return complexity description (optional, for debugging and reporting)
     virtual std::string getComplexityReason() const {
         return "Default complexity";
     }

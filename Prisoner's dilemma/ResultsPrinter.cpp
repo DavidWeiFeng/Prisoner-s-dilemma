@@ -9,7 +9,7 @@
 ResultsPrinter::ResultsPrinter(const Config& config) : config_(config) {
 }
 
-// ==================== 辅助函数 ====================
+// ==================== Utility Functions ====================
 
 std::string ResultsPrinter::formatDouble(double value) {
     return formatDouble(value, 2);
@@ -21,7 +21,7 @@ std::string ResultsPrinter::formatDouble(double value, int precision) {
     return oss.str();
 }
 
-// ==================== 配置和矩阵打印 ====================
+// ==================== Configuration and Matrix Printing ====================
 
 void ResultsPrinter::printConfiguration(const std::vector<std::unique_ptr<Strategy>>& strategies) const {
     std::cout << "\n=================================================\n";
@@ -30,13 +30,13 @@ void ResultsPrinter::printConfiguration(const std::vector<std::unique_ptr<Strate
 
     tabulate::Table table;
 
-    // 模拟配置
+    // Simulation configuration
     table.add_row({ "Rounds per match", std::to_string(config_.rounds) });
     table.add_row({ "Repeats per match", std::to_string(config_.repeats) });
     table.add_row({ "Epsilon", std::to_string(config_.epsilon) });
     table.add_row({ "Random seed", std::to_string(config_.seed) });
 
-    // 收益值
+    // Payoff values
     table.add_row({ "Payoffs (T,R,P,S)",
         std::to_string(config_.payoffs[0]) + ", " +
         std::to_string(config_.payoffs[1]) + ", " +
@@ -44,19 +44,19 @@ void ResultsPrinter::printConfiguration(const std::vector<std::unique_ptr<Strate
         std::to_string(config_.payoffs[3])
     });
 
-    // 策略列表
+    // Strategy list
     std::string strategy_list;
     for (const auto& s : strategies) {
         strategy_list += s->getName() + " ";
     }
     table.add_row({ "Participating strategies", strategy_list });
 
-    // 进化参数
+    // Evolution parameters
     if (config_.evolve) {
         table.add_row({ "Generations", std::to_string(config_.generations) });
     }
 
-    // 格式化表格
+    // Format table
     table.format()
         .border_color(tabulate::Color::none)
         .font_align(tabulate::FontAlign::center);
@@ -76,10 +76,10 @@ void ResultsPrinter::printPayoffMatrix() const {
     
     tabulate::Table table;
 
-    // 设置表头
+    // Set table header
     table.add_row({ "", "Opponent Cooperates (C)", "Opponent Defects (D)" });
 
-    // 第一行：You Cooperate
+    // First row: You Cooperate
     std::ostringstream oss1;
     oss1 << std::fixed << std::setprecision(2);
     oss1 << "R,R = " << R << "," << R;
@@ -90,7 +90,7 @@ void ResultsPrinter::printPayoffMatrix() const {
     
     table.add_row({ "You Cooperate (C)", oss1.str(), oss2.str() });
 
-    // 第二行：You Defect
+    // Second row: You Defect
     std::ostringstream oss3;
     oss3 << std::fixed << std::setprecision(2);
     oss3 << "T,S = " << T << "," << S;
@@ -101,7 +101,7 @@ void ResultsPrinter::printPayoffMatrix() const {
     
     table.add_row({ "You Defect (D)", oss3.str(), oss4.str() });
 
-    // 格式化表格
+    // Format table
     table.format()
         .border_color(tabulate::Color::blue)
         .font_align(tabulate::FontAlign::center);
@@ -116,14 +116,14 @@ void ResultsPrinter::printPayoffMatrix() const {
     std::cout << "\n";
 }
 
-// ==================== 锦标赛结果打印 ====================
+// ==================== Tournament Results Printing ====================
 
 void ResultsPrinter::printTournamentResults(const std::map<std::string, ScoreStats>& results) const {
     std::cout << "\n=================================================\n";
     std::cout << "--- Tournament Results (Average Score per Strategy) ---\n";
     std::cout << "=================================================\n";
 
-    // 按平均分排序
+    // Sort by average score
     std::vector<std::pair<std::string, ScoreStats>> sorted_results(results.begin(), results.end());
     std::sort(sorted_results.begin(), sorted_results.end(),
         [](const auto& a, const auto& b) { return a.second.mean > b.second.mean; });
@@ -145,7 +145,7 @@ void ResultsPrinter::printTournamentResults(const std::map<std::string, ScoreSta
         });
     }
     
-    // 应用样式
+    // Apply styles
     table.format()
         .font_align(tabulate::FontAlign::center)
         .font_style({ tabulate::FontStyle::bold })
@@ -169,23 +169,23 @@ void ResultsPrinter::printMatchTable(
 
     tabulate::Table table;
 
-    // 表头
+    // Table header
     std::vector<std::string> header = { "Strategy \\ Opponent" };
     for (const auto& s : strategies) {
         header.push_back(s->getName());
     }
     table.add_row({ header.begin(), header.end() }); 
 
-    // 填充每一行
+    // Fill each row
     for (size_t i = 0; i < strategies.size(); ++i) {
         std::vector<std::string> row;
-        row.push_back(strategies[i]->getName());  // 行标题
+        row.push_back(strategies[i]->getName());  // Row header
 
         for (size_t j = 0; j < strategies.size(); ++j) {
             std::ostringstream oss;
             oss << std::fixed << std::setprecision(2);
             if (i == j) {
-                // 对角线：自己 vs 自己
+                // Diagonal: self vs self
                 oss << matchResults[i][j].first;
             }
             else {
@@ -197,7 +197,7 @@ void ResultsPrinter::printMatchTable(
         table.add_row({row.begin(),row.end()});
     }
 
-    // 格式化表格
+    // Format table
     table.format()
         .border_color(tabulate::Color::green)
         .font_align(tabulate::FontAlign::center);
@@ -205,7 +205,7 @@ void ResultsPrinter::printMatchTable(
     std::cout << table << std::endl;
 }
 
-// ==================== 噪声分析打印 ====================
+// ==================== Noise Analysis Printing ====================
 
 void ResultsPrinter::printNoiseSweepTable(const std::map<double, std::map<std::string, ScoreStats>>& results) const {
     if (results.empty()) return;
@@ -214,13 +214,13 @@ void ResultsPrinter::printNoiseSweepTable(const std::map<double, std::map<std::s
     std::cout << " Noise Sweep Summary\n";
     std::cout << "=================================================\n\n";
 
-    // 获取所有策略名称
+    // Get all strategy names
     std::vector<std::string> strategies;
     for (const auto& [name, stats] : results.begin()->second) {
         strategies.push_back(name);
     }
 
-    // 打印表头
+    // Print table header
     std::cout << std::setw(10) << "  (Noise)";
     for (const auto& name : strategies) {
         std::cout << std::setw(25) << name;
@@ -228,7 +228,7 @@ void ResultsPrinter::printNoiseSweepTable(const std::map<double, std::map<std::s
     std::cout << "\n";
     std::cout << std::string(10 + strategies.size() * 25, '-') << "\n";
 
-    // 打印每个噪声水平的结果（mean ± CI）
+    // Print results for each noise level (mean ± CI)
     for (const auto& [epsilon, scores] : results) {
         std::cout << std::fixed << std::setprecision(2) << std::setw(10) << epsilon;
         for (const auto& name : strategies) {
@@ -250,7 +250,7 @@ void ResultsPrinter::printNoiseAnalysisTable(
     std::cout << "--- Noise Sweep Analysis Results ---\n";
     std::cout << "=================================================\n\n";
     
-    // 收集所有策略名称
+    // Collect all strategy names
     std::vector<std::string> strategy_names;
     if (!noise_results.empty()) {
         for (const auto& [strategy, _] : noise_results.begin()->second) {
@@ -258,23 +258,23 @@ void ResultsPrinter::printNoiseAnalysisTable(
         }
     }
     
-    // 创建表格
+    // Create table
     tabulate::Table table;
     
-    // 表头
+    // Table header
     std::vector<std::string> header = {"Epsilon (epsilon)"};
     for (const auto& name : strategy_names) {
         header.push_back(name);
     }
     table.add_row({header.begin(), header.end()});
     
-    // 表头样式
+    // Header style
     table[0].format()
         .font_style({tabulate::FontStyle::bold})
         .font_align(tabulate::FontAlign::center)
         .font_color(tabulate::Color::yellow);
     
-    // 数据行
+    // Data rows
     for (const auto& [epsilon, results] : noise_results) {
         std::vector<std::string> row;
         row.push_back(formatDouble(epsilon, 2));
@@ -290,14 +290,14 @@ void ResultsPrinter::printNoiseAnalysisTable(
         table.add_row({row.begin(), row.end()});
     }
     
-    // 表格样式
+    // Table style
     table.format()
         .font_align(tabulate::FontAlign::center)
         .border_color(tabulate::Color::cyan);
     
     std::cout << table << "\n\n";
     
-    // 打印观察结果
+    // Print observations
     std::cout << "Observations:\n";
     std::cout << "  - Compare how each strategy's average payoff changes with noise level\n";
     std::cout << "  - Strategies with smaller drops are more noise-robust\n";
@@ -315,10 +315,10 @@ void ResultsPrinter::exportNoiseAnalysisToCSV(
         return;
     }
     
-    // CSV 表头
+    // CSV header
     file << "Epsilon,Strategy,Mean,StdDev,CI_Lower,CI_Upper\n";
     
-    // 写入数据
+    // Write data
     for (const auto& [epsilon, results] : noise_results) {
         for (const auto& [strategy, stats] : results) {
             file << formatDouble(epsilon, 2) << ","
@@ -334,7 +334,7 @@ void ResultsPrinter::exportNoiseAnalysisToCSV(
     std::cout << "Noise analysis exported to: " << filename << "\n";
 }
 
-// ==================== 剥削者模式打印 ====================
+// ==================== Exploiter Mode Printing ====================
 
 void ResultsPrinter::printExploiterMatchTable(
     const std::string& exploiter_name,
@@ -346,7 +346,7 @@ void ResultsPrinter::printExploiterMatchTable(
 
     tabulate::Table table;
 
-    // 表头
+    // Table header
     table.add_row({
         "Victim Strategy",
         exploiter_name + " Score",
@@ -354,13 +354,13 @@ void ResultsPrinter::printExploiterMatchTable(
         "Score Difference"
     });
 
-    // 表头样式
+    // Header style
     table[0].format()
         .font_style({ tabulate::FontStyle::bold })
         .font_align(tabulate::FontAlign::center)
         .font_color(tabulate::Color::yellow);
 
-    // 添加每场对战的数据
+    // Add data for each match
     double total_exploiter_score = 0.0;
     double total_victim_score = 0.0;
 
@@ -379,7 +379,7 @@ void ResultsPrinter::printExploiterMatchTable(
             formatDouble(difference)
         });
 
-        // 根据得分差异设置颜色
+        // Set color based on score difference
         size_t row_idx = table.size() - 1;
         if (difference > 50) {
             table[row_idx][3].format().font_color(tabulate::Color::green);
@@ -392,7 +392,7 @@ void ResultsPrinter::printExploiterMatchTable(
         }
     }
 
-    // 添加总计行
+    // Add totals row
     if (matchAverages.size() > 1) {
         double avg_exploiter = total_exploiter_score / matchAverages.size();
         double avg_victim = total_victim_score / matchAverages.size();
@@ -405,13 +405,13 @@ void ResultsPrinter::printExploiterMatchTable(
             formatDouble(avg_difference)
         });
 
-        // 总计行加粗
+        // Bold totals row
         table[table.size() - 1].format()
             .font_style({ tabulate::FontStyle::bold })
             .font_color(tabulate::Color::cyan);
     }
 
-    // 设置表格样式
+    // Set table style
     table.format()
         .font_align(tabulate::FontAlign::center)
         .border_color(tabulate::Color::cyan)
@@ -422,7 +422,7 @@ void ResultsPrinter::printExploiterMatchTable(
 
     std::cout << table << "\n\n";
 
-    // 打印解释
+    // Print explanation
     std::cout << "Notes:\n";
     std::cout << "  - Each row shows the average score across " << config_.repeats << " matches.\n";
     std::cout << "  - Score Difference = " << exploiter_name << " Score - Victim Score\n";
@@ -443,7 +443,7 @@ void ResultsPrinter::showExploiterVsOpponent(
         << " vs " << victim_name << "\n";
     std::cout << "=================================================\n\n";
 
-    // 打印结果 - 使用 tabulate 库保持风格一致
+    // Print results - Use tabulate library for consistent style
     std::cout << "Results after " << repeats << " matches of " << rounds << " rounds:\n\n";
 
     tabulate::Table table;
@@ -485,13 +485,13 @@ void ResultsPrinter::analyzeMixedPopulation(
     std::cout << "   Mixed Population Analysis: " << exploiter_name << "\n";
     std::cout << "=================================================\n\n";
 
-    // 按得分排序
+    // Sort by score
     std::vector<std::pair<std::string, ScoreStats>> sorted_results(
         results.begin(), results.end());
     std::sort(sorted_results.begin(), sorted_results.end(),
         [](const auto& a, const auto& b) { return a.second.mean > b.second.mean; });
 
-    // 找到剥削者的排名
+    // Find exploiter's rank
     int exploiter_rank = 0;
     int total_strategies = sorted_results.size();
     
@@ -502,7 +502,7 @@ void ResultsPrinter::analyzeMixedPopulation(
         }
     }
 
-    // 打印排名表
+    // Print ranking table
     std::cout << "Performance Ranking:\n\n";
     std::cout << std::setw(5) << "Rank" 
               << std::setw(15) << "Strategy" 
@@ -526,7 +526,7 @@ void ResultsPrinter::analyzeMixedPopulation(
         rank++;
     }
 
-    // 分析剥削者的表现
+    // Analyze exploiter's performance
     std::cout << "\n--- Performance Analysis ---\n\n";
     
     auto exploiter_stats = results.at(exploiter_name);
@@ -551,7 +551,7 @@ void ResultsPrinter::analyzeMixedPopulation(
         std::cout << "  → This is expected in diverse populations\n";
     }
 
-    // 对比剥削者与最高分策略
+    // Compare exploiter with top strategy
     if (exploiter_rank > 1) {
         const auto& top_strategy = sorted_results[0];
         double score_gap = top_strategy.second.mean - exploiter_stats.mean;
@@ -562,7 +562,7 @@ void ResultsPrinter::analyzeMixedPopulation(
         std::cout << "  → This generates higher average scores than indiscriminate defection\n";
     }
 
-    // 理论解释
+    // Theoretical explanation
     std::cout << "\n--- Theoretical Insight ---\n\n";
     if (exploiter_name == "ALLD") {
         std::cout << "ALLD (Always Defect) in mixed populations:\n";
@@ -581,7 +581,7 @@ void ResultsPrinter::analyzeMixedPopulation(
     std::cout << "\n";
 }
 
-// ==================== 进化模拟打印 ====================
+// ==================== Evolution Simulation Printing ====================
 
 void ResultsPrinter::printEvolutionHeader() const {
     std::cout << "\n=================================================\n";
@@ -598,14 +598,14 @@ void ResultsPrinter::printEvolutionHistory(
     
     tabulate::Table table;
     
-    // 添加表头
+    // Add table header
     std::vector<std::string> header = { "Generation" };
     for (const auto& s : strategies) {
         header.push_back(s->getName());
     }
     table.add_row({ header.begin(), header.end() });
     
-    // 添加数据行 - 每4代显示一次
+    // Add data rows - Display every 4 generations
     for (size_t gen = 0; gen < history.size(); gen++) {
         if (gen % 4 == 0 || gen == history.size() - 1) {
             std::vector<std::string> row = { std::to_string(gen) };
@@ -616,19 +616,19 @@ void ResultsPrinter::printEvolutionHistory(
         }
     }
     
-    // 格式化表格
+    // Format table
     table.format()
         .font_align(tabulate::FontAlign::center)
         .border_color(tabulate::Color::cyan);
     
-    // 表头加粗并使用黄色
+    // Bold and yellow header
     table[0].format()
         .font_style({ tabulate::FontStyle::bold });
     
     std::cout << table << "\n";
 }
 
-// ==================== SCB (Strategic Complexity Budget) 打印 ====================
+// ==================== SCB (Strategic Complexity Budget) Printing ====================
 
 void ResultsPrinter::printComplexityTable(const std::vector<std::unique_ptr<Strategy>>& strategies) const {
     std::cout << "\n=================================================\n";
@@ -637,16 +637,16 @@ void ResultsPrinter::printComplexityTable(const std::vector<std::unique_ptr<Stra
 
     tabulate::Table table;
 
-    // 表头
+    // Table header
     table.add_row({ "Strategy", "Complexity Score", "Reason" });
 
-    // 表头样式
+    // Header style
     table[0].format()
         .font_style({ tabulate::FontStyle::bold })
         .font_align(tabulate::FontAlign::center)
         .font_color(tabulate::Color::yellow);
 
-    // 添加每个策略的复杂度信息
+    // Add complexity information for each strategy
     for (const auto& s : strategies) {
         table.add_row({
             s->getName(),
@@ -655,14 +655,14 @@ void ResultsPrinter::printComplexityTable(const std::vector<std::unique_ptr<Stra
         });
     }
 
-    // 格式化表格
+    // Format table
     table.format()
         .font_align(tabulate::FontAlign::center)
         .border_color(tabulate::Color::cyan);
 
     std::cout << table << "\n\n";
 
-    // 打印说明
+    // Print explanation
     std::cout << "Complexity Score Interpretation:\n";
     std::cout << "  1.0 - Simplest strategies (no memory, fixed output)\n";
     std::cout << "  2.0 - Basic memory-based strategies (1-round memory)\n";
@@ -687,7 +687,7 @@ void ResultsPrinter::printSCBComparison(
     std::cout << "--- Tournament Results Comparison (With/Without SCB) ---\n";
     std::cout << "=================================================\n\n";
 
-    // 收集所有策略并按无 SCB 时的得分排序
+    // Collect all strategies and sort by score without SCB
     std::vector<std::string> strategy_names;
     for (const auto& [name, _] : results_without_scb) {
         strategy_names.push_back(name);
@@ -699,7 +699,7 @@ void ResultsPrinter::printSCBComparison(
 
     tabulate::Table table;
 
-    // 表头
+    // Table header
     table.add_row({
         "Strategy",
         "Without SCB",
@@ -710,20 +710,20 @@ void ResultsPrinter::printSCBComparison(
         "Rank Change"
     });
 
-    // 表头样式
+    // Header style
     table[0].format()
         .font_style({ tabulate::FontStyle::bold })
         .font_align(tabulate::FontAlign::center)
         .font_color(tabulate::Color::yellow);
 
-    // 计算排名
+    // Calculate rankings
     std::map<std::string, int> rank_without, rank_with;
     int r = 1;
     for (const auto& name : strategy_names) {
         rank_without[name] = r++;
     }
 
-    // 按有 SCB 时的得分重新排序以计算排名
+    // Re-sort by score with SCB to calculate rankings
     std::vector<std::string> sorted_with_scb = strategy_names;
     std::sort(sorted_with_scb.begin(), sorted_with_scb.end(),
         [&](const std::string& a, const std::string& b) {
@@ -734,7 +734,7 @@ void ResultsPrinter::printSCBComparison(
         rank_with[name] = r++;
     }
 
-    // 填充表格
+    // Fill table
     for (const auto& name : strategy_names) {
         double score_without = results_without_scb.at(name).mean;
         double score_with = results_with_scb.at(name).mean;
@@ -760,7 +760,7 @@ void ResultsPrinter::printSCBComparison(
             rank_change_str
         });
 
-        // 根据排名变化设置颜色
+        // Set color based on rank change
         size_t row_idx = table.size() - 1;
         if (rank_change > 0) {
             table[row_idx][6].format().font_color(tabulate::Color::green);
@@ -769,7 +769,7 @@ void ResultsPrinter::printSCBComparison(
         }
     }
 
-    // 格式化表格
+    // Format table
     table.format()
         .font_align(tabulate::FontAlign::center)
         .border_color(tabulate::Color::cyan);
@@ -783,104 +783,89 @@ void ResultsPrinter::printSCBComparison(
     std::cout << "  - ↑ indicates rank improvement, ↓ indicates rank decline\n";
     std::cout << "  - Negative Score Diff means complexity cost reduced the score\n\n";
 }
+// ==================== Q3: Exploiter Noise Comparison ====================
 
-void ResultsPrinter::printSCBAnalysis(
-    const std::map<std::string, ScoreStats>& results_without_scb,
-    const std::map<std::string, ScoreStats>& results_with_scb,
-    const std::vector<std::unique_ptr<Strategy>>& strategies) const {
-
+void ResultsPrinter::printExploiterNoiseComparison(
+    const std::string& exploiter_name,
+    const std::map<double, std::map<std::string, std::pair<ScoreStats, ScoreStats>>>& results,
+    int repeats) const {
+    
     std::cout << "\n=================================================\n";
-    std::cout << "--- SCB Impact Analysis ---\n";
+    std::cout << "   Noise Impact on Exploitation\n";
     std::cout << "=================================================\n\n";
-
-    // 按复杂度分组策略
-    std::map<double, std::vector<std::string>> complexity_groups;
-    for (const auto& s : strategies) {
-        complexity_groups[s->getComplexity()].push_back(s->getName());
-    }
-
-    // 计算每个策略的表现下降
-    std::vector<std::tuple<std::string, double, double, double>> strategy_impacts;
-    for (const auto& s : strategies) {
-        std::string name = s->getName();
-        double complexity = s->getComplexity();
-        double score_without = results_without_scb.at(name).mean;
-        double score_with = results_with_scb.at(name).mean;
-        double drop_percent = ((score_without - score_with) / score_without) * 100.0;
-        
-        strategy_impacts.push_back({name, complexity, score_without - score_with, drop_percent});
-    }
-
-    // 按下降百分比排序
-    std::sort(strategy_impacts.begin(), strategy_impacts.end(),
-        [](const auto& a, const auto& b) {
-            return std::get<3>(a) > std::get<3>(b);
-        });
-
-    std::cout << "Performance Impact (sorted by % drop):\n\n";
     
-    for (const auto& [name, complexity, drop_absolute, drop_percent] : strategy_impacts) {
-        std::cout << std::setw(12) << std::left << name << ": "
-                  << "Complexity=" << std::fixed << std::setprecision(1) << complexity
-                  << ", Drop=" << std::setprecision(2) << drop_absolute
-                  << " (" << std::setprecision(1) << drop_percent << "%)";
-        
-        if (drop_percent > 15) {
-            std::cout << "  [High Impact]";
-        } else if (drop_percent > 10) {
-            std::cout << "  [Moderate Impact]";
-        } else {
-            std::cout << "  [Low Impact]";
-        }
-        std::cout << "\n";
-    }
-
-    std::cout << "\n";
-    std::cout << "Key Findings:\n\n";
-
-    // 找出受影响最大和最小的策略
-    auto most_impacted = strategy_impacts.front();
-    auto least_impacted = strategy_impacts.back();
-
-    std::cout << "1. Most Impacted Strategy:\n";
-    std::cout << "   " << std::get<0>(most_impacted) 
-              << " (Complexity=" << std::get<1>(most_impacted) << ")\n";
-    std::cout << "   Lost " << formatDouble(std::get<2>(most_impacted)) 
-              << " points (" << formatDouble(std::get<3>(most_impacted), 1) << "%)\n\n";
-
-    std::cout << "2. Least Impacted Strategy:\n";
-    std::cout << "   " << std::get<0>(least_impacted) 
-              << " (Complexity=" << std::get<1>(least_impacted) << ")\n";
-    std::cout << "   Lost " << formatDouble(std::get<2>(least_impacted)) 
-              << " points (" << formatDouble(std::get<3>(least_impacted), 1) << "%)\n\n";
-
-    std::cout << "3. Interpretation:\n";
-    std::cout << "   When complexity carries a cost (factor=" 
-              << formatDouble(Strategy::getSCBCostFactor(), 2) << "), ";
-    
-    // 检查简单策略是否相对排名上升
-    bool simple_strategies_improved = false;
-    for (const auto& [name, complexity, drop_abs, drop_pct] : strategy_impacts) {
-        if (complexity <= 2.0 && drop_pct < 15.0) {
-            simple_strategies_improved = true;
-            break;
+    // Get list of victims
+    std::vector<std::string> victim_names;
+    if (!results.empty()) {
+        for (const auto& [victim, _] : results.begin()->second) {
+            victim_names.push_back(victim);
         }
     }
     
-    if (simple_strategies_improved) {
-        std::cout << "simple yet robust strategies\n";
-        std::cout << "   gain relative advantage over sophisticated strategies.\n";
-        std::cout << "   This suggests that in resource-constrained environments,\n";
-        std::cout << "   **parsimony beats sophistication**.\n\n";
-    } else {
-        std::cout << "all strategies are proportionally\n";
-        std::cout << "   penalized. The cost factor may need adjustment to observe\n";
-        std::cout << "   meaningful shifts in strategy rankings.\n\n";
+    // Get list of epsilon values
+    std::vector<double> epsilon_values;
+    for (const auto& [epsilon, _] : results) {
+        epsilon_values.push_back(epsilon);
     }
-
-    std::cout << "4. Trade-off Consideration:\n";
-    std::cout << "   - High complexity strategies offer sophisticated behavior\n";
-    std::cout << "     (e.g., noise detection, forgiveness, probing)\n";
-    std::cout << "   - But they pay a cognitive/computational cost\n";
-    std::cout << "   - Optimal strategy depends on the environment's cost structure\n\n";
+    
+    tabulate::Table table;
+    table.add_row({"Victim", "Epsilon", exploiter_name + " Score", 
+                   "Victim Score", "Score Diff", "Change"});
+    
+    table[0].format()
+        .font_style({tabulate::FontStyle::bold})
+        .font_align(tabulate::FontAlign::center)
+        .font_color(tabulate::Color::yellow);
+    
+    // Process each victim
+    for (const auto& victim_name : victim_names) {
+        double score_diff_no_noise = 0.0;
+        
+        // Get no-noise baseline
+        if (results.count(0.0) > 0) {
+            const auto& [exp_stats, vic_stats] = results.at(0.0).at(victim_name);
+            score_diff_no_noise = exp_stats.mean - vic_stats.mean;
+        }
+        
+        // Add rows for each epsilon value for this victim
+        for (const auto& epsilon : epsilon_values) {
+            const auto& [exp_stats, vic_stats] = results.at(epsilon).at(victim_name);
+            double score_diff = exp_stats.mean - vic_stats.mean;
+            double change = score_diff - score_diff_no_noise;
+            
+            std::string change_str;
+            if (epsilon == 0.0) {
+                change_str = "-";
+            } else {
+                change_str = (change > 0 ? "+" : "") + formatDouble(change);
+            }
+            
+            table.add_row({
+                victim_name,
+                formatDouble(epsilon, 2),
+                formatDouble(exp_stats.mean),
+                formatDouble(vic_stats.mean),
+                formatDouble(score_diff),
+                change_str
+            });
+            
+            // Color code the change column based on value
+            size_t row_idx = table.size() - 1;
+            if (epsilon != 0.0) {
+                if (change < -10) {
+                    table[row_idx][5].format().font_color(tabulate::Color::red);
+                } else if (change < 0) {
+                    table[row_idx][5].format().font_color(tabulate::Color::yellow);
+                } else if (change > 0) {
+                    table[row_idx][5].format().font_color(tabulate::Color::green);
+                }
+            }
+        }
+    }
+    
+    table.format()
+        .font_align(tabulate::FontAlign::center)
+        .border_color(tabulate::Color::cyan);
+    
+    std::cout << table << "\n\n";  
 }

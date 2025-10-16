@@ -13,53 +13,56 @@
 
 /**
  * @class SimulatorRunner
- * @brief 协调主要的应用逻辑。
+ * @brief Coordinates the main application logic.
  *
- * 该类负责根据提供的配置来设置策略、运行模拟并协调输出。
- * 所有打印功能已移至 ResultsPrinter 类。
+ * This class is responsible for setting up strategies, running simulations, and coordinating output based on the provided configuration.
+ * All printing functionality has been moved to the ResultsPrinter class.
  */
 class SimulatorRunner {
 public:
-    // 使用配置对象来初始化应用状态。
+    // Initialize application state using configuration object.
     explicit SimulatorRunner(const Config& config);
 
-    // 执行模拟的主入口点。
+    // Main entry point for executing the simulation.
     void run();
 
-    // 用于处理命令行参数解析的静态方法。
+    // Static method for handling command-line argument parsing.
     static Config parseArguments(int argc, char** argv);
 
 private:
 
-    // 根据策略名称创建策略实例的工厂函数。
+    // Factory function to create strategy instances from strategy names.
     static std::unique_ptr<Strategy> createStrategy(const std::string& name);
     Config config_;
     std::vector<std::unique_ptr<Strategy>> strategies_;
     Simulator simulator_;
-    std::map<std::string, ScoreStats> results_; // 用于存储模拟结果（包括置信区间）
+    std::map<std::string, ScoreStats> results_; // Store simulation results (including confidence intervals)
     ResultsPrinter printer_;
 
 
-    // 根据配置中的名称初始化策略对象向量。
+    // Initialize the strategy object vector based on the names in the configuration.
     void setupStrategies();
 
-    // 执行主要的锦标赛或进化模拟。
+    // Execute the main tournament or evolution simulation.
     void runSimulation();
     void runExploiter();
 
-    // 新增：运行进化模拟
+    // New: Run evolution simulation
     void runEvolution();
     std::vector<std::map<std::string, double>> runSingleEvolution(double noise, const std::string& label);
     std::map<std::string, double> calculateFitness(const std::map<std::string, double>& populations, int rounds, int repeats);
     
-    // 新增：运行噪声扫描
+    // New: Run noise sweep
     void runNoiseSweep();
     std::map<double, std::map<std::string, ScoreStats>> executeNoiseSweep(const std::vector<double>& epsilon_values);
 
-    // Q3: 运行剥削者详细对战
+    // Q3: Run exploiter detailed matches
     void runShowExploiter();
     
-    // Q3: 运行混合人群分析
+    // Q3: Run exploiter noise comparison
+    void runExploiterNoiseComparison();
+    
+    // Q3: Run mixed population analysis
     void runMixedPopulationAnalysis();
 
     double playMultipleGames(
@@ -71,7 +74,7 @@ private:
         std::map<std::string, double>& populations,
 		const std::map<std::string, double>& fitness);
 
-    // SCB: 运行带有 SCB 对比的锦标赛
+    // SCB: Run tournament with SCB comparison
     void runSCBComparison();
     void printExploiterMatchTable(
         const std::string& exploiter_name,
