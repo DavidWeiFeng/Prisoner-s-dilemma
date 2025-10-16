@@ -32,6 +32,15 @@
     <ClInclude Include="ResultsPrinter.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="ConfigIO.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="OutputExporter.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="PayoffMatrix.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -41,6 +50,15 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="ResultsPrinter.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="ConfigIO.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="OutputExporter.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="OperatorOverloadingExample.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

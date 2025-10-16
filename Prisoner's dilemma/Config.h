@@ -20,9 +20,9 @@ struct Config {
     //std::vector<std::string> strategy_names = { "PROBER","AllCooperate","TitForTat" };
     std::vector<std::string> strategy_names = { "TitForTat","GrimTrigger","PAVLOV","ContriteTitForTat" };
 
-    std::string format = "csv";
-    std::string save_file;
-    std::string load_file;
+    std::string format = "console";  // Output format: console (default), csv, json, markdown
+    std::string save_file;           // Path to save configuration as JSON
+    std::string load_file;           // Path to load configuration from JSON
     
     // Q2: Noise sweep parameters
     bool noise_sweep = false;           // Whether to enable noise sweep mode

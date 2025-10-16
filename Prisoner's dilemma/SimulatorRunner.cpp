@@ -1,14 +1,50 @@
 ﻿#include "SimulatorRunner.h"
 #include "Strategies.h"
 #include "CLI.hpp"
+#include "ConfigIO.h"
+#include "OutputExporter.h"
 #include <iostream>
 #include <stdexcept>
 #include <vector>
 #include <fstream>
+#include <sstream>
+#include <chrono>
+#include <iomanip>
 
 // Constructor initializes the simulator with payoffs from the configuration.
 SimulatorRunner::SimulatorRunner(const Config& config)
     : config_(config), simulator_(config.payoffs, config.epsilon), printer_(config) {
+}
+
+// Helper function to generate output filename with timestamp
+std::string SimulatorRunner::generateOutputFilename(const std::string& prefix, const std::string& extension) {
+    if (!config_.format.empty() && config_.format != "console") {
+        // Use format-specific extension if specified
+        std::string ext = extension;
+        if (config_.format == "csv" && extension != ".csv") {
+            ext = ".csv";
+        } else if (config_.format == "json" && extension != ".json") {
+            ext = ".json";
+        } else if (config_.format == "markdown" && extension != ".md") {
+            ext = ".md";
+        }
+        
+        // Generate timestamp
+        auto now = std::chrono::system_clock::now();
+        auto time = std::chrono::system_clock::to_time_t(now);
+        std::tm timeinfo;
+        
+        #ifdef _WIN32
+            localtime_s(&timeinfo, &time);
+        #else
+            localtime_r(&time, &timeinfo);
+        #endif
+        
+        std::ostringstream oss;
+        oss << prefix << "_" << std::put_time(&timeinfo, "%Y%m%d_%H%M%S") << ext;
+        return oss.str();
+    }
+    return "";
 }
 
 // Main execution flow
@@ -46,6 +82,9 @@ void SimulatorRunner::run() {
     else {
         runSimulation();
         printer_.printTournamentResults(results_);
+        
+        // Export tournament results to CSV/JSON/Markdown if format is specified
+        exportTournamentResults();
         
         // Q3: If mixed population analysis is enabled
         if (config_.analyze_mixed) {
@@ -156,7 +195,7 @@ void SimulatorRunner::runExploiter() {
             exploiter->reset();
             victim->reset();
 
-            ScorePair scores = simulator_.runGame(exploiter, victim, config_.rounds);
+            auto scores = simulator_.runGame(exploiter, victim, config_.rounds);
 
             allScores[exploiter_name].push_back(scores.first);
             allScores[victim_name].push_back(scores.second);
@@ -187,6 +226,35 @@ void SimulatorRunner::runEvolution() {
 
     auto history_noisefree = runSingleEvolution(0.0, "Noise-Free, epsilon=0.0");
     auto history_noisy = runSingleEvolution(config_.epsilon, "Noisy, epsilon=" + std::to_string(config_.epsilon));
+    
+    // Print ESS analysis for both scenarios
+    printer_.printESSAnalysis(history_noisefree, strategies_, "Noise-Free, epsilon=0.0");
+    printer_.printESSAnalysis(history_noisy, strategies_, "Noisy, epsilon=" + std::to_string(config_.epsilon));
+    
+    // Export evolution results to file if format is specified
+    if (!config_.format.empty() && config_.format != "console") {
+        if (config_.format == "csv") {
+            std::string filename_noisefree = generateOutputFilename("evolution_noisefree", ".csv");
+            if (!filename_noisefree.empty()) {
+                OutputExporter::exportEvolutionCSV(history_noisefree, strategies_, "Noise-Free", filename_noisefree);
+            }
+            
+            std::string filename_noisy = generateOutputFilename("evolution_noisy", ".csv");
+            if (!filename_noisy.empty()) {
+                OutputExporter::exportEvolutionCSV(history_noisy, strategies_, "Noisy", filename_noisy);
+            }
+        } else if (config_.format == "json") {
+            std::string filename_noisefree = generateOutputFilename("evolution_noisefree", ".json");
+            if (!filename_noisefree.empty()) {
+                OutputExporter::exportEvolutionJSON(history_noisefree, strategies_, "Noise-Free", filename_noisefree);
+            }
+            
+            std::string filename_noisy = generateOutputFilename("evolution_noisy", ".json");
+            if (!filename_noisy.empty()) {
+                OutputExporter::exportEvolutionJSON(history_noisy, strategies_, "Noisy", filename_noisy);
+            }
+        }
+    }
 }
 
 std::vector<std::map<std::string, double>>
@@ -259,14 +327,15 @@ double SimulatorRunner::playMultipleGames(
         strat_i->reset();
         strat_j->reset();
 
-        ScorePair scores;
-        if (is_self_play) {
-            auto clone = strat_i->clone();
-            scores = simulator_.runGame(strat_i, clone, rounds);
-        }
-        else {
-            scores = simulator_.runGame(strat_i, strat_j, rounds);
-        }
+        auto scores = [&]() {
+            if (is_self_play) {
+                auto clone = strat_i->clone();
+                return simulator_.runGame(strat_i, clone, rounds);
+            }
+            else {
+                return simulator_.runGame(strat_i, strat_j, rounds);
+            }
+        }();
         total_score += scores.first;
     }
 
@@ -322,12 +391,27 @@ void SimulatorRunner::runNoiseSweep() {
     // Print and export results
     printer_.printNoiseAnalysisTable(noise_results);
     
+    // Export to file if format is specified
+    if (!config_.format.empty() && config_.format != "console") {
+        if (config_.format == "csv") {
+            std::string filename = generateOutputFilename("noise_sweep", ".csv");
+            if (!filename.empty()) {
+                OutputExporter::exportNoiseSweepCSV(noise_results, filename);
+            }
+        } else if (config_.format == "json") {
+            std::string filename = generateOutputFilename("noise_sweep", ".json");
+            if (!filename.empty()) {
+                OutputExporter::exportNoiseSweepJSON(noise_results, filename);
+            }
+        }
+    }
+    
     std::cout << "\n--- Noise sweep completed ---\n";
 }
 
-std::map<double, std::map<std::string, ScoreStats>> 
+std::map<double, std::map<std::string, DoubleScoreStats>> 
 SimulatorRunner::executeNoiseSweep(const std::vector<double>& epsilon_values) {
-    std::map<double, std::map<std::string, ScoreStats>> all_results;
+    std::map<double, std::map<std::string, DoubleScoreStats>> all_results;
     
     for (double epsilon : epsilon_values) {
         std::cout << "\n--- Running tournament with epsilon = " << epsilon << " ---\n";
@@ -358,6 +442,28 @@ SimulatorRunner::executeNoiseSweep(const std::vector<double>& epsilon_values) {
     return all_results;
 }
 
+// Export tournament results to file based on format
+void SimulatorRunner::exportTournamentResults() {
+    if (!config_.format.empty() && config_.format != "console" && !results_.empty()) {
+        if (config_.format == "csv") {
+            std::string filename = generateOutputFilename("tournament", ".csv");
+            if (!filename.empty()) {
+                OutputExporter::exportTournamentCSV(results_, filename);
+            }
+        } else if (config_.format == "json") {
+            std::string filename = generateOutputFilename("tournament", ".json");
+            if (!filename.empty()) {
+                OutputExporter::exportTournamentJSON(results_, filename);
+            }
+        } else if (config_.format == "markdown") {
+            std::string filename = generateOutputFilename("tournament", ".md");
+            if (!filename.empty()) {
+                OutputExporter::exportTournamentMarkdown(results_, filename);
+            }
+        }
+    }
+}
+
 // SCB: Run tournament with comparison (can be called manually for experiments)
 void SimulatorRunner::runSCBComparison() {
     std::cout << "\n=================================================\n";
@@ -379,6 +485,31 @@ void SimulatorRunner::runSCBComparison() {
 
     // Print comparison results
     printer_.printSCBComparison(results_without_scb, results_with_scb);
+
+    // Export results if format is specified
+    if (!config_.format.empty() && config_.format != "console") {
+        if (config_.format == "csv") {
+            std::string filename1 = generateOutputFilename("scb_without", ".csv");
+            if (!filename1.empty()) {
+                OutputExporter::exportTournamentCSV(results_without_scb, filename1);
+            }
+            
+            std::string filename2 = generateOutputFilename("scb_with", ".csv");
+            if (!filename2.empty()) {
+                OutputExporter::exportTournamentCSV(results_with_scb, filename2);
+            }
+        } else if (config_.format == "json") {
+            std::string filename1 = generateOutputFilename("scb_without", ".json");
+            if (!filename1.empty()) {
+                OutputExporter::exportTournamentJSON(results_without_scb, filename1);
+            }
+            
+            std::string filename2 = generateOutputFilename("scb_with", ".json");
+            if (!filename2.empty()) {
+                OutputExporter::exportTournamentJSON(results_with_scb, filename2);
+            }
+        }
+    }
 
     // Restore original configuration
     Strategy::enableSCB(config_.enable_scb);
@@ -418,14 +549,14 @@ void SimulatorRunner::runShowExploiter() {
             exploiter->reset();
             victim->reset();
 
-            ScorePair scores = simulator_.runGame(exploiter, victim, config_.rounds);
+            auto scores = simulator_.runGame(exploiter, victim, config_.rounds);
             exploiter_scores.push_back(scores.first);
             victim_scores.push_back(scores.second);
         }
 
         // Calculate statistics
-        ScoreStats exploiter_stats = simulator_.calculateStats(exploiter_scores);
-        ScoreStats victim_stats = simulator_.calculateStats(victim_scores);
+        auto exploiter_stats = simulator_.calculateStats(exploiter_scores);
+        auto victim_stats = simulator_.calculateStats(victim_scores);
         
         // Use ResultsPrinter to print detailed results
         printer_.showExploiterVsOpponent(
@@ -467,7 +598,7 @@ void SimulatorRunner::runExploiterNoiseComparison() {
     
     // Test two noise levels: 0.0 and config_.epsilon
     std::vector<double> noise_levels = {0.0, config_.epsilon};
-    std::map<double, std::map<std::string, std::pair<ScoreStats, ScoreStats>>> results;
+    std::map<double, std::map<std::string, std::pair<DoubleScoreStats, DoubleScoreStats>>> results;
     
     for (double epsilon : noise_levels) {
         Strategy::setNoise(epsilon);
@@ -484,13 +615,13 @@ void SimulatorRunner::runExploiterNoiseComparison() {
                 exploiter->reset();
                 victim->reset();
                 
-                ScorePair scores = simulator_.runGame(exploiter, victim, config_.rounds);
+                auto scores = simulator_.runGame(exploiter, victim, config_.rounds);
                 exploiter_scores.push_back(scores.first);
                 victim_scores.push_back(scores.second);
             }
             
-            ScoreStats exploiter_stats = simulator_.calculateStats(exploiter_scores);
-            ScoreStats victim_stats = simulator_.calculateStats(victim_scores);
+            auto exploiter_stats = simulator_.calculateStats(exploiter_scores);
+            auto victim_stats = simulator_.calculateStats(victim_scores);
             
             results[epsilon][victim_name] = {exploiter_stats, victim_stats};
             
@@ -540,6 +671,13 @@ Config SimulatorRunner::parseArguments(int argc, char** argv) {
     CLI::App app{ "Iterated Prisoner's Dilemma Simulator" };
     Config config;
 
+    // Configuration file parameters
+    app.add_option("--load-config,--load_config", config.load_file, "Load configuration from JSON file.");
+    app.add_option("--save-config,--save_config", config.save_file, "Save configuration to JSON file.");
+    
+    // Output format parameter
+    app.add_option("--format,--output-format,--output_format", config.format, "Output format (csv, json, markdown, or console). Default: console");
+
     app.add_option("--rounds", config.rounds, "Number of rounds per match.");
     app.add_option("--repeats", config.repeats, "Number of repetitions per match to compute the average score.");
     app.add_option("--epsilon", config.epsilon, "Probability of random action (error rate).");
@@ -579,6 +717,49 @@ Config SimulatorRunner::parseArguments(int argc, char** argv) {
         std::exit(app.exit(e));  // Print error and exit
     }
 
+    // Load configuration from file if specified
+    if (!config.load_file.empty()) {
+        Config loadedConfig = ConfigIO::loadConfig(config.load_file);
+        
+        // Merge: command-line arguments override loaded config
+        // Only override if command-line value is non-default
+        if (argc > 1) {
+            // Keep command-line overrides, use loaded config for unspecified values
+            if (config.rounds == 50 && loadedConfig.rounds != 50) config.rounds = loadedConfig.rounds;
+            if (config.repeats == 5 && loadedConfig.repeats != 5) config.repeats = loadedConfig.repeats;
+            if (config.epsilon == 0 && loadedConfig.epsilon != 0) config.epsilon = loadedConfig.epsilon;
+            if (config.seed == 42 && loadedConfig.seed != 42) config.seed = loadedConfig.seed;
+            if (config.generations == 50 && loadedConfig.generations != 50) config.generations = loadedConfig.generations;
+            if (config.scb_cost_factor == 0.1 && loadedConfig.scb_cost_factor != 0.1) config.scb_cost_factor = loadedConfig.scb_cost_factor;
+            
+            // For vectors and strings, use loaded if current is default
+            if (config.payoffs.size() == 4 && config.payoffs[0] == 5.0) config.payoffs = loadedConfig.payoffs;
+            if (config.strategy_names == loadedConfig.strategy_names || config.strategy_names.empty()) config.strategy_names = loadedConfig.strategy_names;
+            if (config.epsilon_values.size() == 5) config.epsilon_values = loadedConfig.epsilon_values;
+            if (config.format == "csv") config.format = loadedConfig.format;
+            
+            // Boolean flags
+            if (!config.evolve) config.evolve = loadedConfig.evolve;
+            if (!config.noise_sweep) config.noise_sweep = loadedConfig.noise_sweep;
+            if (!config.show_exploiter) config.show_exploiter = loadedConfig.show_exploiter;
+            if (!config.analyze_mixed) config.analyze_mixed = loadedConfig.analyze_mixed;
+            if (!config.exploiter_noise_compare) config.exploiter_noise_compare = loadedConfig.exploiter_noise_compare;
+            if (!config.enable_scb) config.enable_scb = loadedConfig.enable_scb;
+            if (!config.scb_compare) config.scb_compare = loadedConfig.scb_compare;
+        } else {
+            config = loadedConfig;
+            if (!config.load_file.empty()) {
+                Config temp = config;
+                temp.load_file = config.load_file;
+                config = temp;
+            }
+        }
+    }
+
+    // Save configuration to file if specified
+    if (!config.save_file.empty()) {
+        ConfigIO::saveConfig(config, config.save_file);
+    }
 
     return config;
 }

@@ -118,15 +118,15 @@ void ResultsPrinter::printPayoffMatrix() const {
 
 // ==================== Tournament Results Printing ====================
 
-void ResultsPrinter::printTournamentResults(const std::map<std::string, ScoreStats>& results) const {
-    std::cout << "\n=================================================\n";
-    std::cout << "--- Tournament Results (Average Score per Strategy) ---\n";
-    std::cout << "=================================================\n";
+void ResultsPrinter::printTournamentResults(const std::map<std::string, DoubleScoreStats>& results) const {
+std::cout << "\n=================================================\n";
+std::cout << "--- Tournament Results (Average Score per Strategy) ---\n";
+std::cout << "=================================================\n";
 
-    // Sort by average score
-    std::vector<std::pair<std::string, ScoreStats>> sorted_results(results.begin(), results.end());
-    std::sort(sorted_results.begin(), sorted_results.end(),
-        [](const auto& a, const auto& b) { return a.second.mean > b.second.mean; });
+// Sort by average score
+std::vector<std::pair<std::string, DoubleScoreStats>> sorted_results(results.begin(), results.end());
+std::sort(sorted_results.begin(), sorted_results.end(),
+    [](const auto& a, const auto& b) { return a.second.mean > b.second.mean; });
 
     std::cout << "Based on " << config_.repeats << " repeated experiments\n\n";
 
@@ -207,7 +207,7 @@ void ResultsPrinter::printMatchTable(
 
 // ==================== Noise Analysis Printing ====================
 
-void ResultsPrinter::printNoiseSweepTable(const std::map<double, std::map<std::string, ScoreStats>>& results) const {
+void ResultsPrinter::printNoiseSweepTable(const std::map<double, std::map<std::string, DoubleScoreStats>>& results) const {
     if (results.empty()) return;
 
     std::cout << "\n=================================================\n";
@@ -244,7 +244,7 @@ void ResultsPrinter::printNoiseSweepTable(const std::map<double, std::map<std::s
 }
 
 void ResultsPrinter::printNoiseAnalysisTable(
-    const std::map<double, std::map<std::string, ScoreStats>>& noise_results) const {
+const std::map<double, std::map<std::string, DoubleScoreStats>>& noise_results) const {
     
     std::cout << "\n=================================================\n";
     std::cout << "--- Noise Sweep Analysis Results ---\n";
@@ -306,8 +306,8 @@ void ResultsPrinter::printNoiseAnalysisTable(
 }
 
 void ResultsPrinter::exportNoiseAnalysisToCSV(
-    const std::map<double, std::map<std::string, ScoreStats>>& noise_results,
-    const std::string& filename) const {
+const std::map<double, std::map<std::string, DoubleScoreStats>>& noise_results,
+const std::string& filename) const {
     
     std::ofstream file(filename);
     if (!file.is_open()) {
@@ -431,12 +431,12 @@ void ResultsPrinter::printExploiterMatchTable(
 }
 
 void ResultsPrinter::showExploiterVsOpponent(
-    const std::string& exploiter_name,
-    const std::string& victim_name,
-    const ScoreStats& exploiter_stats,
-    const ScoreStats& victim_stats,
-    int repeats,
-    int rounds) const {
+const std::string& exploiter_name,
+const std::string& victim_name,
+const DoubleScoreStats& exploiter_stats,
+const DoubleScoreStats& victim_stats,
+int repeats,
+int rounds) const {
 
     std::cout << "\n=================================================\n";
     std::cout << "   Detailed Match: " << exploiter_name
@@ -478,18 +478,18 @@ void ResultsPrinter::showExploiterVsOpponent(
 }
 
 void ResultsPrinter::analyzeMixedPopulation(
-    const std::map<std::string, ScoreStats>& results,
-    const std::string& exploiter_name) const {
+const std::map<std::string, DoubleScoreStats>& results,
+const std::string& exploiter_name) const {
     
-    std::cout << "\n=================================================\n";
-    std::cout << "   Mixed Population Analysis: " << exploiter_name << "\n";
-    std::cout << "=================================================\n\n";
+std::cout << "\n=================================================\n";
+std::cout << "   Mixed Population Analysis: " << exploiter_name << "\n";
+std::cout << "=================================================\n\n";
 
-    // Sort by score
-    std::vector<std::pair<std::string, ScoreStats>> sorted_results(
-        results.begin(), results.end());
-    std::sort(sorted_results.begin(), sorted_results.end(),
-        [](const auto& a, const auto& b) { return a.second.mean > b.second.mean; });
+// Sort by score
+std::vector<std::pair<std::string, DoubleScoreStats>> sorted_results(
+    results.begin(), results.end());
+std::sort(sorted_results.begin(), sorted_results.end(),
+    [](const auto& a, const auto& b) { return a.second.mean > b.second.mean; });
 
     // Find exploiter's rank
     int exploiter_rank = 0;
@@ -628,6 +628,165 @@ void ResultsPrinter::printEvolutionHistory(
     std::cout << table << "\n";
 }
 
+void ResultsPrinter::printESSAnalysis(
+    const std::vector<std::map<std::string, double>>& history,
+    const std::vector<std::unique_ptr<Strategy>>& strategies,
+    const std::string& label) const {
+    
+    if (history.empty()) return;
+    
+    std::cout << "\n=================================================\n";
+    std::cout << "   ESS (Evolutionarily Stable Strategy) Analysis\n";
+    std::cout << "   " << label << "\n";
+    std::cout << "=================================================\n\n";
+    
+    // Get final generation
+    const auto& final_gen = history.back();
+    
+    // Find dominant strategy/strategies (population > 10%)
+    std::vector<std::pair<std::string, double>> dominant_strategies;
+    std::vector<std::pair<std::string, double>> surviving_strategies;
+    std::vector<std::string> extinct_strategies;
+    
+    for (const auto& s : strategies) {
+        std::string name = s->getName();
+        double final_pop = final_gen.at(name);
+        
+        if (final_pop > 0.10) {
+            dominant_strategies.push_back({name, final_pop});
+        } else if (final_pop > 0.01) {
+            surviving_strategies.push_back({name, final_pop});
+        } else {
+            extinct_strategies.push_back(name);
+        }
+    }
+    
+    // Sort by population descending
+    std::sort(dominant_strategies.begin(), dominant_strategies.end(),
+             [](const auto& a, const auto& b) { return a.second > b.second; });
+    std::sort(surviving_strategies.begin(), surviving_strategies.end(),
+             [](const auto& a, const auto& b) { return a.second > b.second; });
+    
+    // Print dominant strategies
+    std::cout << "DOMINANT STRATEGIES (>10% population):\n";
+    if (dominant_strategies.empty()) {
+        std::cout << "  None - population is highly fragmented\n";
+    } else {
+        for (const auto& [name, pop] : dominant_strategies) {
+            std::cout << "  • " << std::setw(20) << std::left << name 
+                      << ": " << std::fixed << std::setprecision(1) 
+                      << (pop * 100) << "%\n";
+        }
+    }
+    
+    std::cout << "\nSURVIVING STRATEGIES (1%-10% population):\n";
+    if (surviving_strategies.empty()) {
+        std::cout << "  None\n";
+    } else {
+        for (const auto& [name, pop] : surviving_strategies) {
+            std::cout << "  • " << std::setw(20) << std::left << name 
+                      << ": " << std::fixed << std::setprecision(1) 
+                      << (pop * 100) << "%\n";
+        }
+    }
+    
+    std::cout << "\nEXTINCT/NEAR-EXTINCT STRATEGIES (<1% population):\n";
+    if (extinct_strategies.empty()) {
+        std::cout << "  None - all strategies survived!\n";
+    } else {
+        for (const auto& name : extinct_strategies) {
+            std::cout << "  • " << name << "\n";
+        }
+    }
+    
+    // Analyze evolution trajectory
+    std::cout << "\n--- EVOLUTIONARY TRAJECTORY ANALYSIS ---\n\n";
+    
+    // Track which strategies gained/lost population
+    if (history.size() >= 2) {
+        const auto& first_gen = history[0];
+        std::vector<std::pair<std::string, double>> changes;
+        
+        for (const auto& s : strategies) {
+            std::string name = s->getName();
+            double change = final_gen.at(name) - first_gen.at(name);
+            changes.push_back({name, change});
+        }
+        
+        std::sort(changes.begin(), changes.end(),
+                 [](const auto& a, const auto& b) { return a.second > b.second; });
+        
+        std::cout << "Population changes from Generation 0 to " << (history.size() - 1) << ":\n";
+        for (const auto& [name, change] : changes) {
+            std::cout << "  " << std::setw(20) << std::left << name << ": ";
+            if (change > 0) {
+                std::cout << "+" << std::fixed << std::setprecision(1) << (change * 100) << "% (GAINING)";
+            } else if (change < 0) {
+                std::cout << std::fixed << std::setprecision(1) << (change * 100) << "% (DECLINING)";
+            } else {
+                std::cout << " 0.0% (STABLE)";
+            }
+            std::cout << "\n";
+        }
+    }
+    
+    // ESS theory discussion
+    std::cout << "\n--- ESS THEORY INTERPRETATION ---\n\n";
+    
+    // Determine if we have an ESS
+    if (dominant_strategies.size() == 1 && dominant_strategies[0].second > 0.90) {
+        std::cout << "RESULT: Strong ESS detected - " << dominant_strategies[0].first << "\n\n";
+        std::cout << "A single strategy dominates with >" << std::fixed << std::setprecision(0) 
+                  << (dominant_strategies[0].second * 100) << "% of the population.\n";
+        std::cout << "This indicates an Evolutionarily Stable Strategy (ESS) - a strategy that,\n";
+        std::cout << "if adopted by most of the population, cannot be invaded by any alternative\n";
+        std::cout << "strategy through natural selection.\n\n";
+        
+        // Strategy-specific insights
+        std::string winner = dominant_strategies[0].first;
+        if (winner == "TFT" || winner == "CTFT") {
+            std::cout << "TFT/CTFT as ESS:\n";
+            std::cout << "  • Reciprocal strategies form stable cooperative equilibria\n";
+            std::cout << "  • They cooperate with themselves (R payoff) but retaliate against defectors\n";
+            std::cout << "  • Defectors get trapped in mutual defection (P payoff) and cannot invade\n";
+        } else if (winner == "PAVLOV") {
+            std::cout << "PAVLOV as ESS:\n";
+            std::cout << "  • Win-stay, lose-shift is highly adaptive\n";
+            std::cout << "  • Can recover from occasional noise errors\n";
+            std::cout << "  • Forms stable cooperation with similar strategies\n";
+        } else if (winner == "ALLD") {
+            std::cout << "ALLD (All Defect) as ESS:\n";
+            std::cout << "  • In highly noisy environments, cooperation breaks down\n";
+            std::cout << "  • Defection becomes the Nash equilibrium\n";
+            std::cout << "  • This is a suboptimal but stable state (tragedy of the commons)\n";
+        }
+    } else if (dominant_strategies.size() > 1) {
+        std::cout << "RESULT: Mixed ESS / Stable Polymorphism\n\n";
+        std::cout << "Multiple strategies coexist in the population.\n";
+        std::cout << "This suggests:\n";
+        std::cout << "  • No single strategy can completely dominate\n";
+        std::cout << "  • Different strategies exploit different ecological niches\n";
+        std::cout << "  • A diverse population is more resilient to invasion\n\n";
+        
+        // Check for noise effects
+        if (label.find("Noisy") != std::string::npos || label.find("epsilon") != std::string::npos) {
+            std::cout << "NOISE IMPACT:\n";
+            std::cout << "  • Noise disrupts pure cooperation strategies\n";
+            std::cout << "  • Forgiving strategies (PAVLOV, CTFT) gain advantage\n";
+            std::cout << "  • Strict strategies (GRIM) suffer from accidental betrayals\n";
+        }
+    } else {
+        std::cout << "RESULT: No clear ESS - Population fragmented\n\n";
+        std::cout << "All strategies maintain small populations.\n";
+        std::cout << "This suggests:\n";
+        std::cout << "  • The game parameters don't favor any particular strategy\n";
+        std::cout << "  • The system may still be evolving towards equilibrium\n";
+        std::cout << "  • Consider running more generations\n";
+    }
+    
+    std::cout << "\n";
+}
+
 // ==================== SCB (Strategic Complexity Budget) Printing ====================
 
 void ResultsPrinter::printComplexityTable(const std::vector<std::unique_ptr<Strategy>>& strategies) const {
@@ -680,8 +839,8 @@ void ResultsPrinter::printComplexityTable(const std::vector<std::unique_ptr<Stra
 }
 
 void ResultsPrinter::printSCBComparison(
-    const std::map<std::string, ScoreStats>& results_without_scb,
-    const std::map<std::string, ScoreStats>& results_with_scb) const {
+const std::map<std::string, DoubleScoreStats>& results_without_scb,
+const std::map<std::string, DoubleScoreStats>& results_with_scb) const {
 
     std::cout << "\n=================================================\n";
     std::cout << "--- Tournament Results Comparison (With/Without SCB) ---\n";
@@ -786,9 +945,9 @@ void ResultsPrinter::printSCBComparison(
 // ==================== Q3: Exploiter Noise Comparison ====================
 
 void ResultsPrinter::printExploiterNoiseComparison(
-    const std::string& exploiter_name,
-    const std::map<double, std::map<std::string, std::pair<ScoreStats, ScoreStats>>>& results,
-    int repeats) const {
+const std::string& exploiter_name,
+const std::map<double, std::map<std::string, std::pair<DoubleScoreStats, DoubleScoreStats>>>& results,
+int repeats) const {
     
     std::cout << "\n=================================================\n";
     std::cout << "   Noise Impact on Exploitation\n";

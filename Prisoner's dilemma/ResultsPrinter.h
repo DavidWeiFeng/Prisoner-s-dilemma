@@ -31,7 +31,7 @@ public:
     // ==================== Tournament Results Printing ====================
     
     /// Print tournament results table
-    void printTournamentResults(const std::map<std::string, ScoreStats>& results) const;
+    void printTournamentResults(const std::map<std::string, DoubleScoreStats>& results) const;
     
     /// Print match results matrix (moved from Simulator)
     void printMatchTable(
@@ -42,15 +42,15 @@ public:
     
     /// Print noise sweep results table (moved from Simulator)
     void printNoiseSweepTable(
-        const std::map<double, std::map<std::string, ScoreStats>>& results) const;
+        const std::map<double, std::map<std::string, DoubleScoreStats>>& results) const;
     
     /// Print noise analysis table
     void printNoiseAnalysisTable(
-        const std::map<double, std::map<std::string, ScoreStats>>& noise_results) const;
+        const std::map<double, std::map<std::string, DoubleScoreStats>>& noise_results) const;
     
     /// Export noise analysis to CSV file
     void exportNoiseAnalysisToCSV(
-        const std::map<double, std::map<std::string, ScoreStats>>& noise_results,
+        const std::map<double, std::map<std::string, DoubleScoreStats>>& noise_results,
         const std::string& filename) const;
 
     // ==================== Exploiter Mode Printing ====================
@@ -64,20 +64,20 @@ public:
     void showExploiterVsOpponent(
         const std::string& exploiter_name,
         const std::string& victim_name,
-        const ScoreStats& exploiter_stats,
-        const ScoreStats& victim_stats,
+        const DoubleScoreStats& exploiter_stats,
+        const DoubleScoreStats& victim_stats,
         int repeats,
         int rounds) const;
     
     /// Analyze exploiter strategy performance in mixed population (moved from Simulator)
     void analyzeMixedPopulation(
-        const std::map<std::string, ScoreStats>& results,
+        const std::map<std::string, DoubleScoreStats>& results,
         const std::string& exploiter_name) const;
     
     /// Print exploiter noise comparison results (Q3 enhancement)
     void printExploiterNoiseComparison(
         const std::string& exploiter_name,
-        const std::map<double, std::map<std::string, std::pair<ScoreStats, ScoreStats>>>& results,
+        const std::map<double, std::map<std::string, std::pair<DoubleScoreStats, DoubleScoreStats>>>& results,
         int repeats) const;
 
     // ==================== Evolution Simulation Printing ====================
@@ -89,6 +89,12 @@ public:
         const std::vector<std::map<std::string, double>>& history,
         const std::vector<std::unique_ptr<Strategy>>& strategies,
         const std::string& label) const;
+    
+    /// Print ESS (Evolutionarily Stable Strategy) analysis
+    void printESSAnalysis(
+        const std::vector<std::map<std::string, double>>& history,
+        const std::vector<std::unique_ptr<Strategy>>& strategies,
+        const std::string& label) const;
     // ==================== SCB (Strategic Complexity Budget) Printing ====================
     
     /// Print strategy complexity information table
@@ -96,8 +102,8 @@ public:
     
     /// Print SCB comparison results (tournament results comparison with/without SCB)
     void printSCBComparison(
-        const std::map<std::string, ScoreStats>& results_without_scb,
-        const std::map<std::string, ScoreStats>& results_with_scb) const;
+        const std::map<std::string, DoubleScoreStats>& results_without_scb,
+        const std::map<std::string, DoubleScoreStats>& results_with_scb) const;
     
 
     // ==================== Utility Functions ====================

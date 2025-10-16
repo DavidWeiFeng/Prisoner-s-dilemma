@@ -128,13 +128,19 @@
   <ItemGroup>
     <ClInclude Include="CLI.hpp" />
     <ClInclude Include="Config.h" />
+    <ClInclude Include="ConfigIO.h" />
+    <ClInclude Include="OutputExporter.h" />
+    <ClInclude Include="PayoffMatrix.h" />
     <ClInclude Include="ResultsPrinter.h" />
     <ClInclude Include="Simulator.h" />
     <ClInclude Include="Strategies.h" />
     <ClInclude Include="Strategy.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ConfigIO.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="OperatorOverloadingExample.cpp" />
+    <ClCompile Include="OutputExporter.cpp" />
     <ClCompile Include="ResultsPrinter.cpp" />
     <ClCompile Include="SimulatorRunner.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>

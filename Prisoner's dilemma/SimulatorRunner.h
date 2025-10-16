@@ -35,8 +35,8 @@ private:
     static std::unique_ptr<Strategy> createStrategy(const std::string& name);
     Config config_;
     std::vector<std::unique_ptr<Strategy>> strategies_;
-    Simulator simulator_;
-    std::map<std::string, ScoreStats> results_; // Store simulation results (including confidence intervals)
+    DefaultSimulator simulator_;  // Using default double-based Simulator
+    std::map<std::string, DoubleScoreStats> results_; // Store simulation results (including confidence intervals)
     ResultsPrinter printer_;
 
 
@@ -54,7 +54,7 @@ private:
     
     // New: Run noise sweep
     void runNoiseSweep();
-    std::map<double, std::map<std::string, ScoreStats>> executeNoiseSweep(const std::vector<double>& epsilon_values);
+    std::map<double, std::map<std::string, DoubleScoreStats>> executeNoiseSweep(const std::vector<double>& epsilon_values);
 
     // Q3: Run exploiter detailed matches
     void runShowExploiter();
@@ -82,7 +82,11 @@ private:
 
     void printExploiterResults(
         const std::string& exploiter_name,
-		const std::map<std::string, std::pair<ScoreStats, ScoreStats>>& results) const;
+		const std::map<std::string, std::pair<DoubleScoreStats, DoubleScoreStats>>& results) const;
+    
+    // Helper methods for file export
+    std::string generateOutputFilename(const std::string& prefix, const std::string& extension);
+    void exportTournamentResults();
 };
 
 #endif // SIMULATORRUNNER_H
